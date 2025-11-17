@@ -1,0 +1,393 @@
+{
+  "entities": {
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Student entity."
+        },
+        "registrationNumber": {
+          "type": "string",
+          "description": "Student's registration number (e.g., BCS223089)."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Student's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Student's last name."
+        },
+        "department": {
+          "type": "string",
+          "description": "Student's department (e.g., CS, SE, BBA)."
+        },
+        "volunteerHours": {
+          "type": "number",
+          "description": "Number of volunteer hours completed by the student."
+        },
+        "parentEmail": {
+          "type": "string",
+          "description": "Parent's email address for notifications.",
+          "format": "email"
+        },
+        "parentPhoneNumber": {
+          "type": "string",
+          "description": "Parent's phone number for SMS and WhatsApp notifications."
+        }
+      },
+      "required": [
+        "id",
+        "registrationNumber",
+        "firstName",
+        "lastName",
+        "department"
+      ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents a public announcement for students.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Announcement entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the announcement."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the announcement."
+        },
+        "datePublished": {
+          "type": "string",
+          "description": "Date the announcement was published.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "datePublished"
+      ]
+    },
+    "Complaint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Complaint",
+      "type": "object",
+      "description": "Represents a complaint against a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Complaint entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Complaint)"
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher. (Relationship: Teacher 1:N Complaint)"
+        },
+        "violationType": {
+          "type": "string",
+          "description": "Type of violation (e.g., academic dishonesty, misconduct)."
+        },
+        "details": {
+          "type": "string",
+          "description": "Specific details about the incident."
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the complaint (e.g., Pending, Approved, Resolved)."
+        },
+        "dateSubmitted": {
+          "type": "string",
+          "description": "Date the complaint was submitted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "teacherId",
+        "violationType",
+        "details",
+        "status",
+        "dateSubmitted"
+      ]
+    },
+    "Teacher": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Teacher",
+      "type": "object",
+      "description": "Represents a teacher in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Teacher entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Teacher's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Teacher's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Teacher's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "CounselingSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CounselingSession",
+      "type": "object",
+      "description": "Represents a counseling session scheduled for a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CounselingSession entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N CounselingSession)"
+        },
+        "dateScheduled": {
+          "type": "string",
+          "description": "Date and time of the counseling session.",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notes from the counseling session."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "dateScheduled"
+      ]
+    },
+    "Fine": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Fine",
+      "type": "object",
+      "description": "Represents a fine issued to a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Fine entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Fine)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the fine."
+        },
+        "dateIssued": {
+          "type": "string",
+          "description": "Date the fine was issued.",
+          "format": "date-time"
+        },
+        "dateDue": {
+          "type": "string",
+          "description": "Date the fine is due.",
+          "format": "date-time"
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Indicates whether the fine has been paid."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "amount",
+        "dateIssued",
+        "dateDue",
+        "isPaid"
+      ]
+    },
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents an administrator in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Admin entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "Admin's username for login."
+        },
+        "email": {
+          "type": "string",
+          "description": "Admin's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/roles_admin/{adminId}",
+        "definition": {
+          "entityName": "Admin",
+          "schema": {
+            "$ref": "#/backend/entities/Admin"
+          },
+          "description": "Collection to store admin roles. Existence of a document for a given UID grants admin privileges.",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The Firebase Auth UID of the admin user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/teachers/{teacherId}",
+        "definition": {
+          "entityName": "Teacher",
+          "schema": {
+            "$ref": "#/backend/entities/Teacher"
+          },
+          "description": "Collection to store teacher data.  Existence of a document grants teacher privileges.",
+          "params": [
+            {
+              "name": "teacherId",
+              "description": "The unique ID of the teacher."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Collection to store student data.",
+          "params": [
+            {
+              "name": "studentId",
+              "description": "The unique ID of the student."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Collection to store public announcements.",
+          "params": [
+            {
+              "name": "announcementId",
+              "description": "The unique ID of the announcement."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/teachers/{teacherId}/complaints/{complaintId}",
+        "definition": {
+          "entityName": "Complaint",
+          "schema": {
+            "$ref": "#/backend/entities/Complaint"
+          },
+          "description": "Subcollection to store complaints submitted by each teacher.",
+          "params": [
+            {
+              "name": "teacherId",
+              "description": "The ID of the teacher submitting the complaint."
+            },
+            {
+              "name": "complaintId",
+              "description": "The unique ID of the complaint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/counselingSessions/{counselingSessionId}",
+        "definition": {
+          "entityName": "CounselingSession",
+          "schema": {
+            "$ref": "#/backend/entities/CounselingSession"
+          },
+          "description": "Subcollection to store counseling sessions scheduled for each student.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The user ID (student ID) of the student for whom the session is scheduled."
+            },
+            {
+              "name": "counselingSessionId",
+              "description": "The unique ID of the counseling session."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/fines/{fineId}",
+        "definition": {
+          "entityName": "Fine",
+          "schema": {
+            "$ref": "#/backend/entities/Fine"
+          },
+          "description": "Subcollection to store fines issued to each student.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The user ID (student ID) of the student who received the fine."
+            },
+            {
+              "name": "fineId",
+              "description": "The unique ID of the fine."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability. It leverages denormalization and structural segregation to simplify security rules and enable atomic operations. The design incorporates explicit state modeling and consistent naming conventions for improved debuggability and maintainability.\n\n**Authorization Independence:** Authorization is enforced without relying on hierarchical `get()` calls, which could compromise atomic operations. For collaborative data, a membership map (`members`) is used. For user-owned data, the path-based ownership is applied. \n\n**QAPs Support:** The structure supports secure `list` operations (QAPs) by segregating data based on access requirements and using dedicated collections for global roles. Segregation of `announcements` enables public list access while private student data is secured by user-specific paths.\n\nThe structure includes collections for `admins`, `teachers`, `students`, `announcements`, `complaints`, `counselingSessions`, and `fines`. Admin roles are managed through a dedicated `/roles_admin/{uid}` collection, using existence checks in security rules. Teacher roles are managed through a dedicated `/teachers/{teacherId}` collection, again using existence checks. Complaints are stored in `/teachers/{teacherId}/complaints/{complaintId}` to ensure teachers can only see complaints they've submitted. Student-specific data, such as counseling sessions and fines, are stored under `/users/{userId}/counselingSessions/{counselingSessionId}` and `/users/{userId}/fines/{fineId}`, respectively, to ensure proper data ownership and authorization."
+  }
+}

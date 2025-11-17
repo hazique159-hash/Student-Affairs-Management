@@ -1,0 +1,189 @@
+/**
+ * @fileoverview Firestore Security Rules for the Student Management System.
+ *
+ * Core Philosophy:
+ * This ruleset employs a hybrid security model, blending role-based access control (RBAC) for admins and teachers with strict ownership-based access control for student-related data.
+ * Admin privileges are granted by the existence of a document in the `/roles_admin/{adminId}` collection, enabling them to manage all data.
+ * Teacher privileges are granted by the existence of a document in the `/teachers/{teacherId}` collection, enabling them to create complaints.
+ * Student data (counseling sessions, fines) is strictly controlled by user-specific paths, ensuring that only the authenticated user can access their own data.
+ * Public announcements are readable by anyone but can only be created/modified/deleted by admins.
+ *
+ * Data Structure:
+ * - /roles_admin/{adminId}:  Admin role assignments.
+ * - /teachers/{teacherId}: Teacher profiles and authentication.
+ * - /students/{studentId}: Student profiles.
+ * - /announcements/{announcementId}: Public announcements.
+ * - /teachers/{teacherId}/complaints/{complaintId}: Complaints submitted by teachers.
+ * - /users/{userId}/counselingSessions/{counselingSessionId}: Counseling sessions for individual students.
+ * - /users/{userId}/fines/{fineId}: Fines issued to individual students.
+ *
+ * Key Security Decisions:
+ * - Admin role is determined by the existence of a document in `/roles_admin/{adminId}`.
+ * - Teacher role is determined by the existence of a document in `/teachers/{teacherId}`.
+ * - User listing is generally disallowed to protect privacy.
+ * - Data under `/users/{userId}` is strictly accessible only by the authenticated user matching the `userId`.
+ *
+ * Denormalization for Authorization:
+ * - Admin and Teacher privileges are checked using the existence of documents in their respective collections. This avoids complex queries within the rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the resource.
+     * @param {string} userId The user ID to compare with the authenticated user's ID.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+        /**
+         * @description Checks if the user is an existing owner of the resource (i.e., the resource exists and the user is the owner).
+         * @param {string} userId The user ID to compare with the authenticated user's ID.
+         * @return {boolean} True if the user is an existing owner, false otherwise.
+         */
+    function isExistingOwner(userId) {
+            return isOwner(userId) && resource != null;
+        }
+
+    /**
+     * @description Checks if the user is an admin by verifying the existence of a document in the roles_admin collection.
+     * @return {boolean} True if the user is an admin, false otherwise.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * @description Checks if the user is a teacher by verifying the existence of a document in the teachers collection.
+     * @return {boolean} True if the user is a teacher, false otherwise.
+     */
+    function isTeacher() {
+      return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
+
+    /**
+     * @description Rules for the admin roles collection.
+     * @path /roles_admin/{adminId}
+     * @allow (create) If the user is creating their own admin role document (self-creation).
+     * @deny (create) If the user is not authenticated or is trying to create an admin document for someone else.
+     * @allow (get, list, update, delete) If the user is an admin.
+     * @deny (get, list, update, delete) If the user is not an admin.
+     * @principle Enforces admin role management based on document existence.
+     */
+    match /roles_admin/{adminId} {
+      allow create: if isSignedIn() && request.auth.uid == adminId;
+      allow get, list, update, delete: if isAdmin();
+      allow read: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the teachers collection.
+     * @path /teachers/{teacherId}
+     * @allow (create) If the user is an admin (to add new teachers).
+     * @deny (create) If the user is not an admin.
+     * @allow (get, list) If the user is an admin or the teacher themselves.
+     * @deny (get, list) If the user is not an admin or the teacher themselves.
+     * @allow (update, delete) If the user is an admin.
+     * @deny (update, delete) If the user is not an admin.
+     * @principle Enforces teacher role management and data access control.
+     */
+    match /teachers/{teacherId} {
+      allow create: if isAdmin();
+      allow get, list: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
+      allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the students collection.
+     * @path /students/{studentId}
+     * @allow (create) If the user is an admin (to add new students).
+     * @deny (create) If the user is not an admin.
+     * @allow (get, list) If the user is an admin.
+     * @deny (get, list) If the user is not an admin.
+     * @allow (update, delete) If the user is an admin.
+     * @deny (update, delete) If the user is not an admin.
+     * @principle Enforces student data management by admins.
+     */
+    match /students/{studentId} {
+      allow create: if isAdmin();
+      allow get, list: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the announcements collection.
+     * @path /announcements/{announcementId}
+     * @allow (get, list) Public read access for announcements.
+     * @allow (create, update, delete) Only admins can create, update, or delete announcements.
+     * @deny (create, update, delete) Non-admins cannot create, update, or delete announcements.
+     * @principle Public read access with admin-controlled writes.
+     */
+    match /announcements/{announcementId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the complaints subcollection under teachers.
+     * @path /teachers/{teacherId}/complaints/{complaintId}
+     * @allow (create) If the user is a teacher and the teacherId matches the authenticated user's ID. Also requires that `teacherId` in the document matches the path.
+     * @deny (create) If the user is not a teacher or the teacherId does not match the authenticated user's ID.
+     * @allow (get, list) If the user is an admin or the teacher themselves.
+     * @deny (get, list) If the user is not an admin or the teacher themselves.
+     * @allow (update, delete) If the user is an admin.
+     * @deny (update, delete) If the user is not an admin.
+     * @principle Enforces teacher-submitted complaints and admin oversight.
+     */
+    match /teachers/{teacherId}/complaints/{complaintId} {
+        allow create: if isTeacher() && request.auth.uid == teacherId && request.resource.data.teacherId == teacherId;
+        allow get, list: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
+        allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the counselingSessions subcollection under users.
+     * @path /users/{userId}/counselingSessions/{counselingSessionId}
+     * @allow (create) If the user is an admin or if the userId matches the authenticated user's ID. Also requires that `studentId` in the document matches the path.
+     * @deny (create) If the user is not an admin and the userId does not match the authenticated user's ID.
+     * @allow (get, list) If the user is an admin or if the userId matches the authenticated user's ID.
+     * @deny (get, list) If the user is not an admin and the userId does not match the authenticated user's ID.
+     * @allow (update, delete) If the user is an admin.
+     * @deny (update, delete) If the user is not an admin.
+     * @principle Enforces user-specific counseling sessions and admin oversight.
+     */
+    match /users/{userId}/counselingSessions/{counselingSessionId} {
+        allow create: if isAdmin() || (isOwner(userId) && request.resource.data.studentId == userId);
+        allow get, list: if isAdmin() || isOwner(userId);
+        allow update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Rules for the fines subcollection under users.
+     * @path /users/{userId}/fines/{fineId}
+     * @allow (create) If the user is an admin or if the userId matches the authenticated user's ID.  Also requires that `studentId` in the document matches the path.
+     * @deny (create) If the user is not an admin and the userId does not match the authenticated user's ID.
+     * @allow (get, list) If the user is an admin or if the userId matches the authenticated user's ID.
+     * @deny (get, list) If the user is not an admin and the userId does not match the authenticated user's ID.
+     * @allow (update, delete) If the user is an admin.
+     * @deny (update, delete) If the user is not an admin.
+     * @principle Enforces user-specific fines and admin oversight.
+     */
+    match /users/{userId}/fines/{fineId} {
+        allow create: if isAdmin() || (isOwner(userId) && request.resource.data.studentId == userId);
+        allow get, list: if isAdmin() || isOwner(userId);
+        allow update, delete: if isAdmin();
+    }
+  }
+}
