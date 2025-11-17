@@ -536,6 +536,7 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
+    as?: React.ElementType
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
@@ -543,6 +544,7 @@ const SidebarMenuButton = React.forwardRef<
 >(
   (
     {
+      as: As,
       asChild = false,
       isActive = false,
       variant = "default",
@@ -553,8 +555,11 @@ const SidebarMenuButton = React.forwardRef<
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : "button"
+    const Comp = asChild ? Slot : As || "button"
     const { isMobile, state } = useSidebar()
+    
+    // The `as` prop is not a valid DOM attribute, so we remove it from props
+    const { as, ...rest } = props as any;
 
     const button = (
       <Comp
@@ -563,7 +568,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
+        {...rest}
       />
     )
 
