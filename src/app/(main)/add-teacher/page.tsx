@@ -25,11 +25,15 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import {
+  getAuth,
   createUserWithEmailAndPassword,
+  initializeAuth,
 } from 'firebase/auth';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -40,8 +44,16 @@ const teacherSchema = z.object({
     .min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+// Create a secondary Firebase app instance for creating users
+const teacherApp = !getApps().find(app => app.name === 'teacherApp') 
+  ? initializeApp(firebaseConfig, 'teacherApp')
+  : getApp('teacherApp');
+
+const teacherAuth = initializeAuth(teacherApp);
+
+
 export default function AddTeacherPage() {
-  const { auth, firestore } = useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +69,7 @@ export default function AddTeacherPage() {
 
   const onSubmit = async (values: z.infer<typeof teacherSchema>) => {
     setLoading(true);
-    if (!auth || !firestore) {
+    if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -68,20 +80,18 @@ export default function AddTeacherPage() {
     }
     
     try {
-      // We are creating a temporary auth instance to create the user,
-      // as to not interfere with the currently logged in admin user.
-      const tempAuth = auth;
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(teacherAuth, values.email, values.password);
       const user = userCredential.user;
 
       if (user) {
         const teacherRef = doc(firestore, 'teachers', user.uid);
-        await setDocumentNonBlocking(teacherRef, {
+        // Using await here because we want to be sure the teacher doc is created
+        await setDoc(teacherRef, {
             id: user.uid,
             firstName: values.firstName,
             lastName: values.lastName,
             email: values.email,
-        }, {});
+        });
         
         toast({
           title: 'Teacher Added',

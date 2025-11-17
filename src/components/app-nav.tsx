@@ -8,6 +8,7 @@ import {
   HeartHandshake,
   Megaphone,
   MessageSquarePlus,
+  Shield,
   ShieldQuestion,
   Users,
   UserPlus,
@@ -20,6 +21,7 @@ import {
 import { useUser } from '@/firebase';
 
 const baseNavItems = [
+  { href: '/admin', icon: Shield, label: 'Admin', adminOnly: true },
   { href: '/announcements', icon: Megaphone, label: 'Announcements', adminOnly: false },
   { href: '/students', icon: Users, label: 'Student Records', adminOnly: true },
   { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', adminOnly: false },

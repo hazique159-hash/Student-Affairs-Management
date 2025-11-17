@@ -36,6 +36,7 @@ export default function MainLayout({
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
+      router.push('/login');
     }
   };
 

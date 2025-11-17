@@ -1,5 +1,6 @@
+
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter }from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,9 +37,30 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [isSetup, setIsSetup] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { auth } = useFirebase();
+
+  useEffect(() => {
+    // This function will run on the client side to set up the initial admin user.
+    const setupAdmin = async () => {
+      try {
+        await fetch('/api/setup-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: 'admin@admin.com', password: 'admin123' }),
+        });
+      } catch (error) {
+        console.error("Failed to setup admin user:", error);
+      } finally {
+        setIsSetup(true);
+      }
+    };
+    setupAdmin();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,11 +75,21 @@ export default function LoginPage() {
     try {
       if (!auth) throw new Error("Auth service not available");
       await signInWithEmailAndPassword(auth, values.email, values.password);
+      
+      // Check if the logged-in user is an admin
+      const isAdmin = values.email.endsWith('@admin.com');
+
       toast({
         title: 'Login Successful',
-        description: "Welcome back!",
+        description: `Welcome back, ${isAdmin ? 'Admin' : 'Teacher'}!`,
       });
-      router.push('/announcements');
+      
+      if (isAdmin) {
+          router.push('/admin');
+      } else {
+          router.push('/announcements');
+      }
+
     } catch (error: any) {
       console.error(error);
       toast({
@@ -82,48 +114,54 @@ export default function LoginPage() {
             Login to your Admin or Teacher account
           </CardDescription>
         </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="grid gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="admin@admin.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign In
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
+        {!isSetup ? (
+          <CardContent className="flex justify-center items-center p-10">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </CardContent>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardContent className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="admin@admin.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="flex flex-col">
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Sign In
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        )}
       </Card>
     </div>
   );
