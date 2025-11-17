@@ -131,8 +131,20 @@ service cloud.firestore {
      * @principle Public read access with admin-controlled writes.
      */
     match /announcements/{announcementId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    /**
+     * @description Rules for the root complaints collection (for admin view).
+     * @path /complaints/{complaintId}
+     * @allow (read) If the user is an admin.
+     * @allow (create) If the user is a teacher.
+     * @principle Admin read access for aggregated view, teacher write access.
+     */
+    match /complaints/{complaintId} {
+      allow read: if isAdmin();
+      allow create: if isTeacher();
     }
 
     /**
@@ -149,7 +161,8 @@ service cloud.firestore {
     match /teachers/{teacherId}/complaints/{complaintId} {
         allow create: if isTeacher() && request.auth.uid == teacherId && request.resource.data.teacherId == teacherId;
         allow get, list: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
-        allow update, delete: if isAdmin();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
     }
 
     /**
