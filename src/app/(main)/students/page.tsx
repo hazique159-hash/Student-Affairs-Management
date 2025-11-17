@@ -12,15 +12,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Student } from '@/lib/types';
 import { collection } from 'firebase/firestore';
-import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
-  const studentsRef = useMemo(
+  const studentsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'students') : null),
     [firestore]
   );

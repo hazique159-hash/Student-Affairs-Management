@@ -21,17 +21,17 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Announcement } from '@/lib/types';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/firebase/provider';
 
 export default function AnnouncementsPage() {
   const firestore = useFirestore();
   const { user } = useUser();
-  const announcementsRef = useMemo(
+  const announcementsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'announcements') : null),
     [firestore]
   );

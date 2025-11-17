@@ -14,7 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Complaint } from '@/lib/types';
-import { useCollection, useFirestore, useUser } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useMemo } from 'react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -142,7 +142,7 @@ export default function ComplaintsPage() {
   // This is not efficient. In a real app, you'd have a single collection
   // for complaints with teacherId as a field to query against.
   // For now, we'll fetch all complaints if admin, or only for the current teacher.
-  const complaintsRef = useMemo(() => {
+  const complaintsRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     if (isAdmin) {
       return collection(firestore, 'complaints'); // Assumes a root 'complaints' collection for admins
