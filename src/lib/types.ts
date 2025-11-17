@@ -1,6 +1,7 @@
 export type Student = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   department: 'CS' | 'SE' | 'BBA';
   volunteerHours: number;
   email: string;
@@ -13,11 +14,11 @@ export type Complaint = {
   id: string;
   studentId: string;
   studentName: string;
-  date: string;
-  violation: string;
-  submittedBy: string;
+  dateSubmitted: string;
+  violationType: string;
+  teacherId: string;
   status: 'Pending' | 'Approved' | 'Resolved';
-  comments: string;
+  details: string;
 };
 
 export type Announcement = {
@@ -33,4 +34,11 @@ export type CounselingSession = {
     studentName: string;
     date: Date;
     time: string;
+};
+
+export type Teacher = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 };
