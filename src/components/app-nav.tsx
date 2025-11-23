@@ -23,7 +23,7 @@ import { useUser } from '@/firebase';
 const baseNavItems = [
   { href: '/admin', icon: Shield, label: 'Admin', adminOnly: true },
   { href: '/announcements', icon: Megaphone, label: 'Announcements', adminOnly: false },
-  { href: '/students', icon: Users, label: 'Student Records', adminOnly: true },
+  { href: '/students', icon: Users, label: 'Student Records', adminOnly: false },
   { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', adminOnly: false },
   { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', adminOnly: false, teacherOnly: true },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', adminOnly: true },
