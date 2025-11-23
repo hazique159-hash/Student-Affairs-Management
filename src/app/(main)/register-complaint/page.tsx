@@ -53,6 +53,7 @@ export default function RegisterComplaintPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const isAdmin = user?.email?.includes('admin');
 
   const form = useForm<z.infer<typeof complaintSchema>>({
     resolver: zodResolver(complaintSchema),
@@ -96,13 +97,26 @@ export default function RegisterComplaintPage() {
         firestore,
         `teachers/${user.uid}/complaints`
       );
-      const newComplaintDoc = await addDocumentNonBlocking(teacherComplaintsRef, complaintData);
+      
+      const newComplaintDocRefPromise = addDocumentNonBlocking(teacherComplaintsRef, complaintData);
 
-      if (newComplaintDoc) {
-         // Also add to a root 'complaints' collection for admin view.
-         // This is a denormalization step.
-        const rootComplaintRef = doc(firestore, 'complaints', newComplaintDoc.id);
-        await setDoc(rootComplaintRef, complaintData);
+      if (isAdmin) {
+        // If the user is an admin, also write to the root collection.
+        // We need to wait for the teacher-specific doc to be created to get its ID.
+        newComplaintDocRefPromise.then(docRef => {
+            if (docRef) {
+                const rootComplaintRef = doc(firestore, 'complaints', docRef.id);
+                // This is a non-blocking setDoc, but we chain a catch for safety.
+                setDoc(rootComplaintRef, complaintData).catch(error => {
+                    console.error("Error writing to root complaints collection:", error);
+                     toast({
+                        variant: 'destructive',
+                        title: 'Admin Sync Failed',
+                        description: 'Could not sync complaint to admin view.',
+                    });
+                });
+            }
+        });
       }
       
       toast({
