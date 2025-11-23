@@ -4,7 +4,7 @@
  * Core Philosophy:
  * This ruleset employs a hybrid security model, blending role-based access control (RBAC) for admins and teachers with strict ownership-based access control for student-related data.
  * Admin privileges are granted by the existence of a document in the `/roles_admin/{adminId}` collection, enabling them to manage all data.
- * Teacher privileges are granted by the existence of a document in the `/teachers/{teacherId}` collection, enabling them to create complaints.
+ * Teacher privileges are granted by the existence of a document in the `/teachers/{teacherId}` collection, enabling them to create complaints and view student data.
  * Student data (counseling sessions, fines) is strictly controlled by user-specific paths, ensuring that only the authenticated user can access their own data.
  * Public announcements are readable by anyone but can only be created/modified/deleted by admins.
  *
@@ -20,7 +20,7 @@
  * Key Security Decisions:
  * - Admin role is determined by the existence of a document in `/roles_admin/{adminId}`.
  * - Teacher role is determined by the existence of a document in `/teachers/{teacherId}`.
- * - User listing is generally disallowed to protect privacy.
+ * - User listing is generally disallowed to protect privacy, except for students list for teachers and admins.
  * - Data under `/users/{userId}` is strictly accessible only by the authenticated user matching the `userId`.
  *
  * Denormalization for Authorization:
@@ -110,15 +110,15 @@ service cloud.firestore {
      * @path /students/{studentId}
      * @allow (create) If the user is an admin (to add new students).
      * @deny (create) If the user is not an admin.
-     * @allow (get, list) If the user is an admin.
-     * @deny (get, list) If the user is not an admin.
+     * @allow (get, list) If the user is an admin or a teacher.
+     * @deny (get, list) If the user is not an admin or a teacher.
      * @allow (update, delete) If the user is an admin.
      * @deny (update, delete) If the user is not an admin.
-     * @principle Enforces student data management by admins.
+     * @principle Enforces student data management by admins and read access for teachers.
      */
     match /students/{studentId} {
       allow create: if isAdmin();
-      allow get, list: if isAdmin();
+      allow get, list: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
