@@ -32,10 +32,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useFirestore, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { setDoc } from 'firebase/firestore';
 
 const complaintSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
@@ -91,15 +92,18 @@ export default function RegisterComplaintPage() {
     };
 
     try {
-      const complaintsRef = collection(
+      const teacherComplaintsRef = collection(
         firestore,
         `teachers/${user.uid}/complaints`
       );
-      await addDocumentNonBlocking(complaintsRef, complaintData);
+      const newComplaintDoc = await addDocumentNonBlocking(teacherComplaintsRef, complaintData);
 
-      // Also add to a root 'complaints' collection for admin view
-      const allComplaintsRef = collection(firestore, 'complaints');
-      await addDocumentNonBlocking(allComplaintsRef, complaintData);
+      if (newComplaintDoc) {
+         // Also add to a root 'complaints' collection for admin view.
+         // This is a denormalization step.
+        const rootComplaintRef = doc(firestore, 'complaints', newComplaintDoc.id);
+        await setDoc(rootComplaintRef, complaintData);
+      }
       
       toast({
         title: 'Complaint Submitted',
