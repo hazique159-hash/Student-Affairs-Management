@@ -19,7 +19,7 @@
  *
  * Key Security Decisions:
  * - Admin role is determined by the existence of a document in `/roles_admin/{adminId}`.
- * - Teacher role is determined by the existence of a document in `/teachers/{teacherId}`.
+ * - Teacher role is determined by the existence of a a document in `/teachers/{teacherId}`.
  * - User listing is generally disallowed to protect privacy, except for students list for teachers and admins.
  * - Data under `/users/{userId}` is strictly accessible only by the authenticated user matching the `userId`.
  *
@@ -46,15 +46,6 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-        /**
-         * @description Checks if the user is an existing owner of the resource (i.e., the resource exists and the user is the owner).
-         * @param {string} userId The user ID to compare with the authenticated user's ID.
-         * @return {boolean} True if the user is an existing owner, false otherwise.
-         */
-    function isExistingOwner(userId) {
-            return isOwner(userId) && resource != null;
-        }
 
     /**
      * @description Checks if the user is an admin by verifying the existence of a document in the roles_admin collection.
@@ -83,7 +74,7 @@ service cloud.firestore {
      * @principle Enforces admin role management based on document existence.
      */
     match /roles_admin/{adminId} {
-      allow create: if isSignedIn() && request.auth.uid == adminId;
+      allow create: if isOwner(adminId);
       allow get, list, update, delete: if isAdmin();
       allow read: if isAdmin();
     }
@@ -101,7 +92,8 @@ service cloud.firestore {
      */
     match /teachers/{teacherId} {
       allow create: if isAdmin();
-      allow get, list: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
+      allow get: if isOwner(teacherId) || isAdmin();
+      allow list: if isAdmin();
       allow update, delete: if isAdmin();
     }
 
@@ -118,7 +110,7 @@ service cloud.firestore {
      */
     match /students/{studentId} {
       allow create: if isAdmin();
-      allow get, list: if isAdmin() || isTeacher();
+      allow read: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
@@ -159,8 +151,8 @@ service cloud.firestore {
      * @principle Enforces teacher-submitted complaints and admin oversight.
      */
     match /teachers/{teacherId}/complaints/{complaintId} {
-        allow create: if isTeacher() && request.auth.uid == teacherId && request.resource.data.teacherId == teacherId;
-        allow get, list: if isAdmin() || (isSignedIn() && request.auth.uid == teacherId);
+        allow create: if isOwner(teacherId) && request.resource.data.teacherId == teacherId;
+        allow get, list: if isAdmin() || isOwner(teacherId);
         allow update: if isAdmin();
         allow delete: if isAdmin();
     }
