@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquarePlus } from 'lucide-react';
+import { MessageSquarePlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { predefinedViolations, students } from '@/lib/data';
-import { useForm, Controller } from 'react-hook-form';
+import { students as staticStudents, predefinedViolations } from '@/lib/data';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -31,12 +31,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, addDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { setDoc } from 'firebase/firestore';
+import type { Student } from '@/lib/types';
+
 
 const complaintSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
@@ -54,6 +54,12 @@ export default function RegisterComplaintPage() {
   const { toast } = useToast();
   const router = useRouter();
   const isAdmin = user?.email?.includes('admin');
+
+  const studentsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'students') : null),
+    [firestore]
+  );
+  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
 
   const form = useForm<z.infer<typeof complaintSchema>>({
     resolver: zodResolver(complaintSchema),
@@ -74,7 +80,7 @@ export default function RegisterComplaintPage() {
       return;
     }
 
-    const student = students.find((s) => s.id === values.studentId);
+    const student = students?.find((s) => s.id === values.studentId);
     if (!student) {
       toast({
         variant: 'destructive',
@@ -86,37 +92,24 @@ export default function RegisterComplaintPage() {
 
     const complaintData = {
       ...values,
-      studentName: student.name,
+      studentName: `${student.firstName} ${student.lastName}`,
       teacherId: user.uid,
-      status: 'Pending',
+      status: 'Pending' as 'Pending' | 'Approved' | 'Resolved',
       dateSubmitted: new Date().toISOString(),
     };
 
     try {
+      // All users with teacher roles can write to their own subcollection
       const teacherComplaintsRef = collection(
         firestore,
         `teachers/${user.uid}/complaints`
       );
-      
-      const newComplaintDocRefPromise = addDocumentNonBlocking(teacherComplaintsRef, complaintData);
+      const newComplaintDocRef = await addDoc(teacherComplaintsRef, complaintData);
 
+      // Only admins also write to the root collection for aggregation
       if (isAdmin) {
-        // If the user is an admin, also write to the root collection.
-        // We need to wait for the teacher-specific doc to be created to get its ID.
-        newComplaintDocRefPromise.then(docRef => {
-            if (docRef) {
-                const rootComplaintRef = doc(firestore, 'complaints', docRef.id);
-                // This is a non-blocking setDoc, but we chain a catch for safety.
-                setDoc(rootComplaintRef, complaintData).catch(error => {
-                    console.error("Error writing to root complaints collection:", error);
-                     toast({
-                        variant: 'destructive',
-                        title: 'Admin Sync Failed',
-                        description: 'Could not sync complaint to admin view.',
-                    });
-                });
-            }
-        });
+        const rootComplaintRef = doc(firestore, 'complaints', newComplaintDocRef.id);
+        await setDoc(rootComplaintRef, complaintData);
       }
       
       toast({
@@ -124,7 +117,9 @@ export default function RegisterComplaintPage() {
         description: 'Your complaint has been successfully submitted.',
       });
       router.push('/complaints');
+
     } catch (error: any) {
+      console.error('Error submitting complaint:', error);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
@@ -160,16 +155,17 @@ export default function RegisterComplaintPage() {
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isLoadingStudents}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a student" />
+                          <SelectValue placeholder={isLoadingStudents ? "Loading students..." : "Select a student"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {students.map((student) => (
+                        {students?.map((student) => (
                           <SelectItem key={student.id} value={student.id}>
-                            {student.name} ({student.id})
+                            {student.firstName} {student.lastName} ({student.id})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -228,6 +224,7 @@ export default function RegisterComplaintPage() {
             </CardContent>
             <CardFooter className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>
+                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit Complaint
               </Button>
             </CardFooter>
