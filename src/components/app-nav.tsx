@@ -12,6 +12,7 @@ import {
   ShieldQuestion,
   Users,
   UserPlus,
+  CircleDollarSign,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -21,29 +22,36 @@ import {
 import { useUser } from '@/firebase';
 
 const baseNavItems = [
-  { href: '/admin', icon: Shield, label: 'Admin', adminOnly: true },
-  { href: '/announcements', icon: Megaphone, label: 'Announcements', adminOnly: false },
-  { href: '/students', icon: Users, label: 'Student Records', adminOnly: false },
-  { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', adminOnly: false },
-  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', adminOnly: false, teacherOnly: true },
-  { href: '/counseling', icon: HeartHandshake, label: 'Counseling', adminOnly: true },
-  { href: '/analytics', icon: BarChart2, label: 'Analytics', adminOnly: true },
-  { href: '/notifications', icon: Bell, label: 'Notifications', adminOnly: true },
-  { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', adminOnly: true },
+  { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
+  { href: '/announcements', icon: Megaphone, label: 'Announcements', roles: ['admin', 'teacher', 'student'] },
+  { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
+  { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher'] },
+  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
+  { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
+  { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
+  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
+  { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
+  { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
 ];
 
 export function AppNav() {
   const pathname = usePathname();
   const { user } = useUser();
-  const isAdmin = user?.email?.endsWith('@admin.com');
-
-  const navItems = baseNavItems.filter(item => {
-    if (isAdmin) {
-      return !item.teacherOnly;
+  
+  const getRole = () => {
+    if (user?.email?.endsWith('@admin.com')) {
+      return 'admin';
     }
-    // For teachers (or other non-admin roles)
-    return !item.adminOnly;
-  });
+    if (user?.email) {
+      // This is a simplification. In a real-world app, you'd use custom claims.
+      return 'teacher';
+    }
+    return 'student';
+  }
+  
+  const userRole = getRole();
+
+  const navItems = baseNavItems.filter(item => item.roles.includes(userRole));
 
 
   return (

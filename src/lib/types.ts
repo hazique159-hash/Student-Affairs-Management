@@ -42,3 +42,13 @@ export type Teacher = {
   lastName: string;
   email: string;
 };
+
+export type Fine = {
+  id: string;
+  studentId: string;
+  amount: number;
+  dateIssued: string;
+  dateDue: string;
+  isPaid: boolean;
+  reason: string;
+};

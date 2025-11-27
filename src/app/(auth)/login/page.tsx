@@ -29,7 +29,7 @@ import { useFirebase } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  email: z.string().min(1, { message: 'Please enter a valid email or registration number.' }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
@@ -72,20 +72,32 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    let emailToLogin = values.email;
+    // Simple check to see if it's a student registration number
+    if (!values.email.includes('@')) {
+        emailToLogin = `${values.email}@student.com`;
+    }
+
     try {
       if (!auth) throw new Error("Auth service not available");
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      await signInWithEmailAndPassword(auth, emailToLogin, values.password);
       
-      // Check if the logged-in user is an admin
-      const isAdmin = values.email.endsWith('@admin.com');
+      const isAdmin = emailToLogin.endsWith('@admin.com');
+      const isStudent = emailToLogin.endsWith('@student.com');
+      
+      let role = 'Teacher';
+      if (isAdmin) role = 'Admin';
+      if (isStudent) role = 'Student';
 
       toast({
         title: 'Login Successful',
-        description: `Welcome back, ${isAdmin ? 'Admin' : 'Teacher'}!`,
+        description: `Welcome back, ${role}!`,
       });
       
       if (isAdmin) {
           router.push('/admin');
+      } else if(isStudent) {
+          router.push('/my-fines');
       } else {
           router.push('/announcements');
       }
@@ -111,7 +123,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl">AffairsConnect</CardTitle>
           <CardDescription>
-            Login to your Admin or Teacher account
+            Login to your Account
           </CardDescription>
         </CardHeader>
         {!isSetup ? (
@@ -127,11 +139,10 @@ export default function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Email or Registration No.</FormLabel>
                       <FormControl>
                         <Input
-                          type="email"
-                          placeholder="admin@admin.com"
+                          placeholder="user@example.com or BCS223089"
                           {...field}
                         />
                       </FormControl>

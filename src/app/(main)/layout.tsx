@@ -57,7 +57,18 @@ export default function MainLayout({
     );
   }
 
-  const isAdmin = user.email?.endsWith('@admin.com');
+  const getRole = () => {
+    if (user.email?.endsWith('@admin.com')) {
+      return 'Admin';
+    }
+    if (user.email?.includes('@')) {
+        // Simple check, could be improved with custom claims
+        return 'Teacher';
+    }
+    return 'Student';
+  }
+
+  const role = getRole();
 
   return (
     <SidebarProvider>
@@ -87,18 +98,18 @@ export default function MainLayout({
               <Avatar className="h-9 w-9">
                 <AvatarImage
                   src={userAvatar.imageUrl}
-                  alt={isAdmin ? 'Admin' : 'Teacher'}
+                  alt={role}
                   data-ai-hint={userAvatar.imageHint}
                 />
-                <AvatarFallback>{isAdmin ? 'A' : 'T'}</AvatarFallback>
+                <AvatarFallback>{role.charAt(0)}</AvatarFallback>
               </Avatar>
             )}
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-medium truncate">
-                {user.email}
+                {user.email || user.uid}
               </span>
               <span className="text-xs text-muted-foreground truncate">
-                {isAdmin ? 'Supervisor' : 'Teacher'}
+                {role === 'Admin' ? 'Supervisor' : role}
               </span>
             </div>
             <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout}>
