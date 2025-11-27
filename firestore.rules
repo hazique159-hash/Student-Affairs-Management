@@ -12,6 +12,7 @@
  * - /roles_admin/{adminId}:  Admin role assignments.
  * - /teachers/{teacherId}: Teacher profiles and authentication.
  * - /students/{studentId}: Student profiles.
+ * - /users/{userId}: Core user data linking auth UID to student profile.
  * - /announcements/{announcementId}: Public announcements.
  * - /teachers/{teacherId}/complaints/{complaintId}: Complaints submitted by teachers.
  * - /users/{userId}/counselingSessions/{counselingSessionId}: Counseling sessions for individual students.
@@ -113,6 +114,19 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+     /**
+     * @description Rules for the users collection.
+     * @path /users/{userId}
+     * @allow (create) If the user is an admin (to add new student users).
+     * @allow (read) If the user is the owner or an admin.
+     * @principle Controls access to user documents that link auth to student profiles.
+     */
+    match /users/{userId} {
+        allow create: if isAdmin();
+        allow read: if isOwner(userId) || isAdmin();
+    }
+
+
     /**
      * @description Rules for the announcements collection.
      * @path /announcements/{announcementId}
@@ -191,5 +205,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
