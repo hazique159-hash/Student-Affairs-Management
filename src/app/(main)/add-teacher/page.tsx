@@ -29,7 +29,8 @@ import {
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useState } from 'react';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
@@ -41,7 +42,8 @@ const teacherSchema = z.object({
 });
 
 export default function AddTeacherPage() {
-  const { firestore } = useFirebase();
+  const { firestore }.
+    useFirebase();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof teacherSchema>>({
@@ -64,11 +66,13 @@ export default function AddTeacherPage() {
       return;
     }
 
-    const secondaryAuth = getAuth();
+    const tempAppName = `temp-teacher-creation-${Date.now()}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth,
+        tempAuth,
         values.email,
         values.password
       );
@@ -95,6 +99,8 @@ export default function AddTeacherPage() {
         title: 'Failed to Add Teacher',
         description: error.message || 'An unexpected error occurred.',
       });
+    } finally {
+        await deleteApp(tempApp);
     }
   };
 

@@ -36,6 +36,8 @@ import {
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 const studentSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
@@ -46,11 +48,6 @@ const studentSchema = z.object({
   department: z.enum(['CS', 'SE', 'BBA'], {
     required_error: 'Please select a department.',
   }),
-  parentEmail: z
-    .string()
-    .email({ message: 'Please enter a valid email.' })
-    .optional(),
-  parentPhone: z.string().optional(),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
@@ -67,8 +64,6 @@ export default function AddStudentPage() {
       lastName: '',
       registrationNumber: '',
       department: undefined,
-      parentEmail: '',
-      parentPhone: '',
       password: '',
     },
   });
@@ -84,14 +79,15 @@ export default function AddStudentPage() {
     }
 
     const studentEmail = `${values.registrationNumber}@student.com`;
-    // We need a separate Auth instance to create a user without logging out the current admin.
-    // getAuth() without arguments will get the default app's auth instance, which is what we want
-    // to use for this secondary operation.
-    const secondaryAuth = getAuth(); 
+    
+    // Create a temporary, secondary Firebase app for user creation.
+    const tempAppName = `temp-user-creation-${Date.now()}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth,
+        tempAuth,
         studentEmail,
         values.password
       );
@@ -106,10 +102,9 @@ export default function AddStudentPage() {
           firstName: values.firstName,
           lastName: values.lastName,
           department: values.department,
-          parentEmail: values.parentEmail || '',
-          parentPhoneNumber: values.parentPhone || '',
+          parentEmail: '',
+          parentPhoneNumber: '',
           volunteerHours: 0,
-          // We are not storing the email in the student document as it can be derived.
         });
         
         // Also create a user document in the `users` collection for fines/counseling etc.
@@ -118,7 +113,6 @@ export default function AddStudentPage() {
           studentId: values.registrationNumber,
           email: studentEmail
         });
-
 
         toast({
           title: 'Student Added',
@@ -132,6 +126,9 @@ export default function AddStudentPage() {
         title: 'Failed to Add Student',
         description: error.message || 'An unexpected error occurred.',
       });
+    } finally {
+        // Clean up the temporary app instance.
+        await deleteApp(tempApp);
     }
   };
 
