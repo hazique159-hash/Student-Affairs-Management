@@ -42,8 +42,7 @@ const teacherSchema = z.object({
 });
 
 export default function AddTeacherPage() {
-  const { firestore }.
-    useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof teacherSchema>>({
