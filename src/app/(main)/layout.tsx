@@ -9,10 +9,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { AppNav } from '@/components/app-nav';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { LogOut, ShieldQuestion } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -23,7 +21,6 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const userAvatar = PlaceHolderImages.find((p) => p.id === 'user-avatar');
   const { auth, user, isUserLoading } = useFirebase();
   const router = useRouter();
 
@@ -58,13 +55,17 @@ export default function MainLayout({
   }
 
   const getRole = () => {
-    if (user.email?.endsWith('@admin.com')) {
+    const email = user?.email || '';
+    if (email.endsWith('@admin.com')) {
       return 'Admin';
     }
-    if (user.email?.endsWith('@student.com')) {
+    if (email.endsWith('@student.com')) {
       return 'Student';
     }
-    return 'Teacher';
+    if (email) {
+      return 'Teacher';
+    }
+    return 'Student'; // Default for safety, though should have email
   };
 
   const role = getRole();
@@ -93,16 +94,6 @@ export default function MainLayout({
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border">
           <div className="flex items-center gap-2 p-2">
-            {userAvatar && (
-              <Avatar className="h-9 w-9">
-                <AvatarImage
-                  src={userAvatar.imageUrl}
-                  alt={role}
-                  data-ai-hint={userAvatar.imageHint}
-                />
-                <AvatarFallback>{role.charAt(0)}</AvatarFallback>
-              </Avatar>
-            )}
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-medium truncate">
                 {user.email || user.uid}
