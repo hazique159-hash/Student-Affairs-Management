@@ -43,9 +43,8 @@ export function AppNav() {
     if (user?.email?.endsWith('@admin.com')) {
       return 'admin';
     }
-    // Check if it's a student based on email format
-    if (user?.email && /^[a-zA-Z0-9-]*@student\.com$/.test(user.email)) {
-        return 'student';
+    if (user?.email?.endsWith('@student.com')) {
+      return 'student';
     }
     if (user?.email) {
       return 'teacher';

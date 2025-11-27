@@ -61,12 +61,11 @@ export default function MainLayout({
     if (user.email?.endsWith('@admin.com')) {
       return 'Admin';
     }
-    if (user.email?.includes('@')) {
-        // Simple check, could be improved with custom claims
-        return 'Teacher';
+    if (user.email?.endsWith('@student.com')) {
+      return 'Student';
     }
-    return 'Student';
-  }
+    return 'Teacher';
+  };
 
   const role = getRole();
 
