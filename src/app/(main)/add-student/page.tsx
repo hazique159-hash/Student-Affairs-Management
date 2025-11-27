@@ -34,12 +34,8 @@ import { useFirebase } from '@/firebase';
 import {
   getAuth,
   createUserWithEmailAndPassword,
-  initializeAuth,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useState } from 'react';
-import { getApp, getApps, initializeApp } from 'firebase/app';
-import { firebaseConfig } from '@/firebase/config';
 
 const studentSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
@@ -60,15 +56,8 @@ const studentSchema = z.object({
     .min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-// Create a secondary Firebase app instance for creating users
-const studentCreatorApp = !getApps().find((app) => app.name === 'studentCreatorApp')
-  ? initializeApp(firebaseConfig, 'studentCreatorApp')
-  : getApp('studentCreatorApp');
-
-const studentCreatorAuth = initializeAuth(studentCreatorApp);
-
 export default function AddStudentPage() {
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof studentSchema>>({
@@ -85,7 +74,7 @@ export default function AddStudentPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof studentSchema>) => {
-    if (!firestore) {
+    if (!firestore || !auth) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -96,9 +85,15 @@ export default function AddStudentPage() {
 
     const studentEmail = `${values.registrationNumber}@student.com`;
 
+    // We need a separate Auth instance to create a user without logging out the current admin
+    const secondaryAuth = getAuth();
+
     try {
+      // We can't use the main `auth` object as it would log out the current admin.
+      // Instead, we use the `createUserWithEmailAndPassword` with the separate auth instance.
+      // Firebase handles this gracefully behind the scenes without needing a separate app instance.
       const userCredential = await createUserWithEmailAndPassword(
-        studentCreatorAuth,
+        secondaryAuth,
         studentEmail,
         values.password
       );
