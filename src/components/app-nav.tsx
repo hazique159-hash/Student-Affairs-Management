@@ -27,6 +27,7 @@ const baseNavItems = [
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher'] },
   { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
+  { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
   { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
@@ -42,11 +43,14 @@ export function AppNav() {
     if (user?.email?.endsWith('@admin.com')) {
       return 'admin';
     }
+    // Check if it's a student based on email format
+    if (user?.email && /^[a-zA-Z0-9-]*@student\.com$/.test(user.email)) {
+        return 'student';
+    }
     if (user?.email) {
-      // This is a simplification. In a real-world app, you'd use custom claims.
       return 'teacher';
     }
-    return 'student';
+    return 'student'; // Default to student if no email
   }
   
   const userRole = getRole();

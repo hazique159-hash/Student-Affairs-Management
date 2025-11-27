@@ -1,5 +1,6 @@
 export type Student = {
   id: string;
+  registrationNumber: string;
   firstName: string;
   lastName: string;
   department: 'CS' | 'SE' | 'BBA';
