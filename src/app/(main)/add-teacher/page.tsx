@@ -41,9 +41,8 @@ const teacherSchema = z.object({
 });
 
 export default function AddTeacherPage() {
-  const { firestore, auth } = useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof teacherSchema>>({
     resolver: zodResolver(teacherSchema),
@@ -56,14 +55,12 @@ export default function AddTeacherPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof teacherSchema>) => {
-    setLoading(true);
-    if (!firestore || !auth) {
+    if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Firebase not initialized.',
       });
-      setLoading(false);
       return;
     }
 
@@ -98,8 +95,6 @@ export default function AddTeacherPage() {
         title: 'Failed to Add Teacher',
         description: error.message || 'An unexpected error occurred.',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -181,8 +176,8 @@ export default function AddTeacherPage() {
               />
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Teacher Account
               </Button>
             </CardFooter>

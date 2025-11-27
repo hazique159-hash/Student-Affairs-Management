@@ -57,7 +57,7 @@ const studentSchema = z.object({
 });
 
 export default function AddStudentPage() {
-  const { firestore, auth } = useFirebase();
+  const { firestore } = useFirebase();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof studentSchema>>({
@@ -74,7 +74,7 @@ export default function AddStudentPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof studentSchema>) => {
-    if (!firestore || !auth) {
+    if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -84,14 +84,12 @@ export default function AddStudentPage() {
     }
 
     const studentEmail = `${values.registrationNumber}@student.com`;
-
-    // We need a separate Auth instance to create a user without logging out the current admin
-    const secondaryAuth = getAuth();
+    // We need a separate Auth instance to create a user without logging out the current admin.
+    // getAuth() without arguments will get the default app's auth instance, which is what we want
+    // to use for this secondary operation.
+    const secondaryAuth = getAuth(); 
 
     try {
-      // We can't use the main `auth` object as it would log out the current admin.
-      // Instead, we use the `createUserWithEmailAndPassword` with the separate auth instance.
-      // Firebase handles this gracefully behind the scenes without needing a separate app instance.
       const userCredential = await createUserWithEmailAndPassword(
         secondaryAuth,
         studentEmail,
@@ -100,6 +98,7 @@ export default function AddStudentPage() {
       const user = userCredential.user;
 
       if (user) {
+        // Use the student's registration number as the document ID for simplicity and uniqueness.
         const studentRef = doc(firestore, 'students', values.registrationNumber);
         await setDoc(studentRef, {
           id: values.registrationNumber,
@@ -110,8 +109,16 @@ export default function AddStudentPage() {
           parentEmail: values.parentEmail || '',
           parentPhoneNumber: values.parentPhone || '',
           volunteerHours: 0,
-          email: studentEmail,
+          // We are not storing the email in the student document as it can be derived.
         });
+        
+        // Also create a user document in the `users` collection for fines/counseling etc.
+        const userRef = doc(firestore, 'users', user.uid);
+        await setDoc(userRef, {
+          studentId: values.registrationNumber,
+          email: studentEmail
+        });
+
 
         toast({
           title: 'Student Added',
