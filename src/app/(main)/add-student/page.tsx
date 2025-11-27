@@ -70,7 +70,6 @@ const studentCreatorAuth = initializeAuth(studentCreatorApp);
 export default function AddStudentPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof studentSchema>>({
     resolver: zodResolver(studentSchema),
@@ -86,14 +85,12 @@ export default function AddStudentPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof studentSchema>) => {
-    setLoading(true);
     if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Firebase not initialized.',
       });
-      setLoading(false);
       return;
     }
 
@@ -133,8 +130,6 @@ export default function AddStudentPage() {
         title: 'Failed to Add Student',
         description: error.message || 'An unexpected error occurred.',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -234,8 +229,8 @@ export default function AddStudentPage() {
               />
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Student Account
               </Button>
             </CardFooter>
