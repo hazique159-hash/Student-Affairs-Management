@@ -158,7 +158,7 @@ export default function AddStudentPage() {
                     <FormItem>
                       <FormLabel>First Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John" {...field} />
+                        <Input placeholder="Muhammad" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -171,7 +171,7 @@ export default function AddStudentPage() {
                     <FormItem>
                       <FormLabel>Last Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Doe" {...field} />
+                        <Input placeholder="Haziq" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
