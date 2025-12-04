@@ -84,7 +84,7 @@ export default function MyFinesPage() {
                   <TableRow key={fine.id}>
                     <TableCell>{new Date(fine.dateIssued).toLocaleDateString()}</TableCell>
                     <TableCell>{fine.reason}</TableCell>
-                    <TableCell>${fine.amount.toFixed(2)}</TableCell>
+                    <TableCell>PKR {fine.amount.toFixed(2)}</TableCell>
                     <TableCell>{new Date(fine.dateDue).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={fine.isPaid ? 'secondary' : 'destructive'}>
