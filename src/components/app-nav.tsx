@@ -22,17 +22,34 @@ import {
 import { useUser } from '@/firebase';
 
 const baseNavItems = [
+  // Admin
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
+  { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
   { href: '/announcements', icon: Megaphone, label: 'Announcements', roles: ['admin', 'teacher', 'student'] },
+  { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher'] },
-  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
-  { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
-  { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
   { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
-  { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
+  { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
+  
+  // Teacher
+  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
+
+  // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
+];
+
+const adminNavOrder = [
+  '/analytics',
+  '/announcements',
+  '/add-teacher',
+  '/students',
+  '/complaints',
+  '/counseling',
+  '/notifications',
+  '/add-student',
+  '/admin'
 ];
 
 export function AppNav() {
@@ -54,7 +71,13 @@ export function AppNav() {
   
   const userRole = getRole();
 
-  const navItems = baseNavItems.filter(item => item.roles.includes(userRole));
+  let navItems = baseNavItems.filter(item => item.roles.includes(userRole));
+
+  if (userRole === 'admin') {
+    const adminItems = adminNavOrder.map(href => navItems.find(item => item.href === href)).filter(Boolean);
+    const otherAdminItems = navItems.filter(item => !adminNavOrder.includes(item.href) && item.roles.includes('admin'));
+    navItems = [...(adminItems as any), ...otherAdminItems];
+  }
 
 
   return (
