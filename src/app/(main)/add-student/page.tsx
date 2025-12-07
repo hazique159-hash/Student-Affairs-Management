@@ -104,7 +104,6 @@ export default function AddStudentPage() {
           department: values.department,
           parentEmail: '',
           parentPhoneNumber: '',
-          volunteerHours: 0,
         });
         
         // Also create a user document in the `users` collection for fines/counseling etc.

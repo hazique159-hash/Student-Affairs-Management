@@ -30,7 +30,7 @@ export default function StudentsPage() {
       <PageHeader
         title="Student Records"
         icon={Users}
-        description="Manage student records and track volunteer service hours."
+        description="Manage student records."
       >
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -46,7 +46,6 @@ export default function StudentsPage() {
                 <TableHead>Student ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Department</TableHead>
-                <TableHead className="text-right">Volunteer Hours</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -62,9 +61,6 @@ export default function StudentsPage() {
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-6 w-16" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-5 w-12 ml-auto" />
                     </TableCell>
                     <TableCell className="text-right">
                       <Skeleton className="h-8 w-16 ml-auto" />
@@ -95,9 +91,6 @@ export default function StudentsPage() {
                       >
                         {student.department}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {student.volunteerHours}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">

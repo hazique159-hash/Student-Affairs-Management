@@ -4,7 +4,6 @@ export type Student = {
   firstName: string;
   lastName: string;
   department: 'CS' | 'SE' | 'BBA';
-  volunteerHours: number;
   email: string;
   phone: string;
   parentEmail: string;

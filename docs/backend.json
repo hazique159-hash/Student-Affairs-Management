@@ -26,10 +26,6 @@
           "type": "string",
           "description": "Student's department (e.g., CS, SE, BBA)."
         },
-        "volunteerHours": {
-          "type": "number",
-          "description": "Number of volunteer hours completed by the student."
-        },
         "parentEmail": {
           "type": "string",
           "description": "Parent's email address for notifications.",
