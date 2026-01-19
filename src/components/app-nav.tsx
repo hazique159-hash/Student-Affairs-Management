@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart2,
-  Bell,
   HeartHandshake,
   Megaphone,
   MessageSquarePlus,
@@ -30,7 +29,6 @@ const baseNavItems = [
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher', 'student'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
-  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   
   // Teacher
@@ -47,7 +45,6 @@ const adminNavOrder = [
   '/students',
   '/complaints',
   '/counseling',
-  '/notifications',
   '/add-student',
   '/admin'
 ];
