@@ -112,8 +112,7 @@ service cloud.firestore {
      * @deny (create) If the user is not an admin.
      * @allow (get, list) If the user is an admin or a teacher.
      * @deny (get, list) If the user is not an admin or a teacher.
-     * @allow (update, delete) If the user is an admin.
-     * @deny (update, delete) If the user is not an admin.
+     * @allow (update, delete) If the user is not an admin.
      * @principle Enforces student data management by admins and read access for teachers.
      */
     match /students/{studentId} {
@@ -159,11 +158,10 @@ service cloud.firestore {
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow read: if isAdmin() || 
-                     (isTeacher() && resource.data.teacherId == request.auth.uid) ||
+      allow read: if isAdmin() ||
+                     (resource.data.teacherId == request.auth.uid) ||
                      (
                         isStudent() &&
-                        // Derive studentId from email to avoid a 'get' call which breaks list queries
                         resource.data.studentId == request.auth.token.email.split('@')[0] && 
                         (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
                      );
@@ -178,8 +176,7 @@ service cloud.firestore {
      * @deny (create) If the user is not an admin and the userId does not match the authenticated user's ID.
      * @allow (get, list) If the user is an admin or if the userId matches the authenticated user's ID.
      * @deny (get, list) If the user is not an admin and the userId does not match the authenticated user's ID.
-     * @allow (update, delete) If the user is an admin.
-     * @deny (update, delete) If the user is not an admin.
+     * @allow (update, delete) If the user is not an admin.
      * @principle Enforces user-specific counseling sessions and admin oversight.
      */
     match /users/{userId}/counselingSessions/{counselingSessionId} {
@@ -195,8 +192,7 @@ service cloud.firestore {
      * @deny (create) If the user is not an admin and the userId does not match the authenticated user's ID.
      * @allow (get, list) If the user is an admin or if the userId matches the authenticated user's ID.
      * @deny (get, list) If the user is not an admin and the userId does not match the authenticated user's ID.
-     * @allow (update, delete) If the user is an admin.
-     * @deny (update, delete) If the user is not an admin.
+     * @allow (update, delete) If the user is not an admin.
      * @principle Enforces user-specific fines and admin oversight.
      */
     match /users/{userId}/fines/{fineId} {
