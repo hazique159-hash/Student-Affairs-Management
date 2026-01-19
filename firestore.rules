@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for the Student Management System.
  *
@@ -152,20 +153,16 @@ service cloud.firestore {
      * @path /complaints/{complaintId}
      * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
      * @allow (update, delete) If the user is an admin (to approve/resolve status).
-     * @allow (list) Allows any signed-in user to perform a query. The security is enforced by the 'get' rule on each document returned by the query. This is required to allow role-based queries from the client.
-     * @allow (get) Secures the actual read of a document. A user can get a document if they are an admin, the teacher who wrote it, or the student it's about (if approved/resolved).
+     * @allow (read) Allows a read if the user is the teacher who created it, or the student it's about. This rule is query-compatible.
+     *               Admin access for reads is currently disabled to allow teacher/student queries to function.
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAdmin();
-      allow list: if isSignedIn();
-      allow get: if isAdmin()
-                 || resource.data.teacherId == request.auth.uid
+      allow read: if request.auth.uid == resource.data.teacherId
                  || (
-                    // This rule allows a student to read their own approved/resolved complaints.
-                    // It checks that a 'users' document exists for the requester and then matches the studentId.
-                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                    resource.data.studentId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId &&
+                    request.auth.token.email_verified &&
+                    request.auth.email == resource.data.studentId + '@student.com' &&
                     resource.data.status in ['Approved', 'Resolved']
                  );
     }
