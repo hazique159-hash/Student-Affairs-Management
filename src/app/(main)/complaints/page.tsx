@@ -1,7 +1,13 @@
 'use client';
-import { ShieldQuestion } from 'lucide-react';
+import { ShieldAlert, ShieldQuestion, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import {
   Table,
@@ -13,27 +19,71 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { Complaint } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   useCollection,
+  useDoc,
   useFirestore,
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
+import type { Complaint } from '@/lib/types';
 import { useMemo } from 'react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const ComplaintTable = ({
+// ============================================================================
+// Shared Components
+// ============================================================================
+
+const getStatusVariant = (status: 'Approved' | 'Resolved' | 'Pending') => {
+  switch (status) {
+    case 'Pending':
+      return 'outline';
+    case 'Approved':
+      return 'destructive';
+    case 'Resolved':
+      return 'secondary';
+    default:
+      return 'default';
+  }
+};
+
+const ComplaintDetailsDialog = ({ complaint }: { complaint: Complaint }) => (
+  <Dialog>
+    <DialogTrigger asChild>
+      <Button variant="link" className="p-0 h-auto">
+        View Details
+      </Button>
+    </DialogTrigger>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Complaint Details</DialogTitle>
+        <DialogDescription>
+          Violation: {complaint.violationType}
+        </DialogDescription>
+      </DialogHeader>
+      <p className="py-4 text-sm text-muted-foreground">{complaint.details}</p>
+    </DialogContent>
+  </Dialog>
+);
+
+const ComplaintsTable = ({
   complaints,
   isLoading,
-  isAdmin,
+  role,
 }: {
   complaints: Complaint[];
   isLoading: boolean;
-  isAdmin: boolean;
+  role: 'admin' | 'teacher' | 'student';
 }) => {
   const firestore = useFirestore();
 
@@ -49,77 +99,111 @@ const ComplaintTable = ({
     updateDocumentNonBlocking(complaintRef, { status: 'Resolved' });
   };
 
+  const tableHeaders = {
+    admin: ['Student', 'Violation', 'Submitted By', 'Date', 'Actions'],
+    teacher: ['Student', 'Violation', 'Date', 'Status', 'Actions'],
+    student: ['Date Submitted', 'Violation', 'Details', 'Status'],
+  };
+
   return (
     <Card>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Violation</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Submitted By</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              {tableHeaders[role].map((header) => (
+                <TableHead key={header}>{header}</TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading &&
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-4 w-32 mt-1" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-28" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-24" />
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Skeleton className="h-8 w-20 inline-block" />
+                  <TableCell colSpan={tableHeaders[role].length}>
+                    <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
               ))}
+            {!isLoading && complaints.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={tableHeaders[role].length}
+                  className="h-24 text-center"
+                >
+                  No complaints to display.
+                </TableCell>
+              </TableRow>
+            )}
             {!isLoading &&
               complaints.map((complaint) => (
                 <TableRow key={complaint.id}>
-                  <TableCell>
-                    <div className="font-medium">{complaint.studentName}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {complaint.studentId}
-                    </div>
-                  </TableCell>
-                  <TableCell>{complaint.violationType}</TableCell>
-                  <TableCell>
-                    {new Date(complaint.dateSubmitted).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{complaint.teacherId}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    {isAdmin && complaint.status === 'Pending' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(complaint.id)}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                    {isAdmin && complaint.status === 'Approved' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleResolve(complaint.id)}
-                      >
-                        Resolve
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm">
-                      Details
-                    </Button>
-                  </TableCell>
+                  {/* Student View */}
+                  {role === 'student' && (
+                    <>
+                      <TableCell>
+                        {new Date(complaint.dateSubmitted).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{complaint.violationType}</TableCell>
+                      <TableCell>
+                        <ComplaintDetailsDialog complaint={complaint} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(complaint.status)}>
+                          {complaint.status}
+                        </Badge>
+                      </TableCell>
+                    </>
+                  )}
+                  {/* Admin/Teacher View */}
+                  {role !== 'student' && (
+                    <>
+                      <TableCell>
+                        <div className="font-medium">
+                          {complaint.studentName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {complaint.studentId}
+                        </div>
+                      </TableCell>
+                      <TableCell>{complaint.violationType}</TableCell>
+                      {role === 'admin' && (
+                        <TableCell>{complaint.teacherId}</TableCell>
+                      )}
+                      <TableCell>
+                        {new Date(complaint.dateSubmitted).toLocaleDateString()}
+                      </TableCell>
+                      {role === 'teacher' && (
+                        <TableCell>
+                          <Badge variant={getStatusVariant(complaint.status)}>
+                            {complaint.status}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell className="space-x-2 text-right">
+                        {role === 'admin' &&
+                          complaint.status === 'Pending' && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprove(complaint.id)}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                        {role === 'admin' &&
+                          complaint.status === 'Approved' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleResolve(complaint.id)}
+                            >
+                              Resolve
+                            </Button>
+                          )}
+                        <ComplaintDetailsDialog complaint={complaint} />
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
           </TableBody>
@@ -129,87 +213,143 @@ const ComplaintTable = ({
   );
 };
 
+// ============================================================================
+// Main Page Component
+// ============================================================================
+
 export default function ComplaintsPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
-  const isAdmin = user?.email?.includes('admin') ?? false;
+  const { user, isUserLoading } = useUser();
+
+  const role: 'admin' | 'teacher' | 'student' | 'loading' = useMemo(() => {
+    if (isUserLoading) return 'loading';
+    if (user?.email?.endsWith('@admin.com')) return 'admin';
+    if (user?.email?.endsWith('@student.com')) return 'student';
+    return 'teacher';
+  }, [user, isUserLoading]);
+
+  // For students, we need to get their student ID from the `users` collection first.
+  const userProfileRef = useMemoFirebase(
+    () => (firestore && user && role === 'student' ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user, role]
+  );
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<{ studentId: string }>(userProfileRef);
+
 
   const complaintsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-
     const complaintsCollection = collection(firestore, 'complaints');
-
-    if (isAdmin) {
-      // Admin sees all complaints, ordered by date
-      return query(complaintsCollection, orderBy('dateSubmitted', 'desc'));
+    
+    switch (role) {
+      case 'admin':
+        // Admins see all complaints
+        return query(complaintsCollection, orderBy('dateSubmitted', 'desc'));
+      case 'teacher':
+        // Teachers see complaints they submitted
+        return query(complaintsCollection, where('teacherId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
+      case 'student':
+        // Students see approved/resolved complaints against them
+        if (!userProfile?.studentId) return null; // Wait for profile to load
+        return query(
+          complaintsCollection,
+          where('studentId', '==', userProfile.studentId),
+          where('status', 'in', ['Approved', 'Resolved']),
+          orderBy('dateSubmitted', 'desc')
+        );
+      default:
+        return null;
     }
+  }, [firestore, user, role, userProfile]);
 
-    // Teacher sees their own complaints
-    return query(
-      complaintsCollection,
-      where('teacherId', '==', user.uid),
-      orderBy('dateSubmitted', 'desc')
-    );
-  }, [firestore, user, isAdmin]);
+  const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsQuery);
 
-  const { data: complaints, isLoading } = useCollection<Complaint>(
-    complaintsQuery
-  );
+  const isLoading = isUserLoading || (role === 'student' && isLoadingProfile) || isLoadingComplaints;
+  
+  const pageDetails = {
+      admin: {
+        icon: ShieldQuestion,
+        title: "Complaint Management",
+        description: "Review, approve, and manage all student complaints.",
+      },
+      teacher: {
+        icon: ShieldQuestion,
+        title: "My Submitted Complaints",
+        description: "Review and track the status of your submitted complaints.",
+      },
+      student: {
+          icon: ShieldAlert,
+          title: "My Complaints",
+          description: "A record of all official complaints filed against you."
+      },
+      loading: {
+          icon: Loader2,
+          title: "Loading Complaints",
+          description: "Please wait..."
+      }
+  }
 
-  const pendingComplaints = useMemo(
-    () => complaints?.filter((c) => c.status === 'Pending') ?? [],
-    [complaints]
-  );
-  const approvedComplaints = useMemo(
-    () => complaints?.filter((c) => c.status === 'Approved') ?? [],
-    [complaints]
-  );
-  const resolvedComplaints = useMemo(
-    () => complaints?.filter((c) => c.status === 'Resolved') ?? [],
-    [complaints]
-  );
+  // Admin and Teacher view with tabs
+  const AdminTeacherView = () => {
+    const pending = useMemo(() => complaints?.filter((c) => c.status === 'Pending') ?? [], [complaints]);
+    const approved = useMemo(() => complaints?.filter((c) => c.status === 'Approved') ?? [], [complaints]);
+    const resolved = useMemo(() => complaints?.filter((c) => c.status === 'Resolved') ?? [], [complaints]);
+
+    return (
+        <Tabs defaultValue="pending">
+          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
+            <TabsTrigger value="pending">
+              Pending <Badge className="ml-2">{pending.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="approved">
+              Approved <Badge className="ml-2">{approved.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          </TabsList>
+          <TabsContent value="pending">
+            <ComplaintsTable complaints={pending} isLoading={isLoading} role={role as 'admin' | 'teacher'} />
+          </TabsContent>
+          <TabsContent value="approved">
+            <ComplaintsTable complaints={approved} isLoading={isLoading} role={role as 'admin' | 'teacher'} />
+          </TabsContent>
+          <TabsContent value="resolved">
+            <ComplaintsTable complaints={resolved} isLoading={isLoading} role={role as 'admin' | 'teacher'} />
+          </TabsContent>
+        </Tabs>
+    )
+  }
+
+  // Student view, simple table
+  const StudentView = () => (
+      <Card>
+          <CardHeader>
+              <CardTitle>Complaint History</CardTitle>
+              <CardDescription>
+                  These are the official complaints that have been reviewed and approved by the administration.
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+              <ComplaintsTable complaints={complaints || []} isLoading={isLoading} role="student" />
+          </CardContent>
+      </Card>
+  )
+
+  if (role === 'loading') {
+      return (
+          <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Complaint Management"
-        icon={ShieldQuestion}
-        description="Review, approve, and manage student complaints."
+        title={pageDetails[role].title}
+        icon={pageDetails[role].icon}
+        description={pageDetails[role].description}
       />
 
-      <Tabs defaultValue="pending">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
-          <TabsTrigger value="pending">
-            Pending <Badge className="ml-2">{pendingComplaints.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            Approved <Badge className="ml-2">{approvedComplaints.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
-        </TabsList>
-        <TabsContent value="pending">
-          <ComplaintTable
-            complaints={pendingComplaints}
-            isLoading={isLoading}
-            isAdmin={isAdmin}
-          />
-        </TabsContent>
-        <TabsContent value="approved">
-          <ComplaintTable
-            complaints={approvedComplaints}
-            isLoading={isLoading}
-            isAdmin={isAdmin}
-          />
-        </TabsContent>
-        <TabsContent value="resolved">
-          <ComplaintTable
-            complaints={resolvedComplaints}
-            isLoading={isLoading}
-            isAdmin={isAdmin}
-          />
-        </TabsContent>
-      </Tabs>
+      {(role === 'admin' || role === 'teacher') ? <AdminTeacherView /> : <StudentView />}
     </div>
   );
 }
-    

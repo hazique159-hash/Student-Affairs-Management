@@ -149,18 +149,33 @@ service cloud.firestore {
     }
     
     /**
-     * @description Rules for the centralized complaints collection. This rule is structured to be efficient for list queries.
+     * @description Rules for the centralized complaints collection.
+     * This rule is structured to support queries from admins, teachers, and students.
      * @path /complaints/{complaintId}
-     * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
-     * @allow (update, delete) If the user is an admin (to approve/resolve status).
-     * @allow (read) This rule allows a teacher to read a complaint if their UID matches the teacherId. It is deliberately simple
-     *               to allow the teacher's list query to succeed. Student and admin read access is temporarily removed to fix
-     *               the query error and will be restored.
+     * @allow create - Only teachers can create complaints, and they must be the author.
+     * @allow update, delete - Only admins can modify or delete complaints.
+     * @allow read - This is the key rule. It allows a read if the user is an Admin,
+     *               OR if they are the teacher who wrote the complaint,
+     *               OR if they are the student the complaint is about (and it's approved/resolved).
+     *               This complex rule is safe for queries because the client application
+     *               is now structured to issue specific queries per role, which the Firestore
+     *               query engine can validate against these conditions.
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAdmin();
-      allow read: if request.auth.uid == resource.data.teacherId;
+
+      // IMPORTANT: This rule works because the client now issues specific queries for each role.
+      // A teacher's query is `where("teacherId", "==", uid)`.
+      // A student's query is `where("studentId", "==", studentId)`.
+      // An admin's query is not constrained.
+      // Firestore can validate each of these queries against the relevant part of the OR condition.
+      allow read: if isAdmin() || 
+                     (resource.data.teacherId == request.auth.uid) ||
+                     (
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId 
+                       && resource.data.status in ['Approved', 'Resolved']
+                     );
     }
 
     /**

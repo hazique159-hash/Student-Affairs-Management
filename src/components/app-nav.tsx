@@ -13,7 +13,6 @@ import {
   Users,
   UserPlus,
   CircleDollarSign,
-  ShieldAlert,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -29,7 +28,7 @@ const baseNavItems = [
   { href: '/announcements', icon: Megaphone, label: 'Announcements', roles: ['admin', 'teacher', 'student'] },
   { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
-  { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher'] },
+  { href: '/complaints', icon: ShieldQuestion, label: 'Complaints', roles: ['admin', 'teacher', 'student'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
@@ -39,7 +38,6 @@ const baseNavItems = [
 
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
-  { href: '/my-complaints', icon: ShieldAlert, label: 'My Complaints', roles: ['student'] },
 ];
 
 const adminNavOrder = [
@@ -100,5 +98,3 @@ export function AppNav() {
     </SidebarMenu>
   );
 }
-
-    
