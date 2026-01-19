@@ -67,23 +67,6 @@ service cloud.firestore {
     }
 
     /**
-     * @description Checks if the user is a student by verifying the existence of a document in the users collection.
-     * @return {boolean} True if the user is a student, false otherwise.
-     */
-    function isStudent() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-    
-    /**
-     * @description Retrieves the student registration number from their user document.
-     * @return {string} The student's registration number.
-     */
-    function getStudentRegNo() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId;
-    }
-
-
-    /**
      * @description Rules for the admin roles collection.
      * @path /roles_admin/{adminId}
      * @allow (create) If the user is creating their own admin role document (self-creation).
@@ -169,23 +152,20 @@ service cloud.firestore {
       // Update and delete are restricted to admins.
       allow update, delete: if isAdmin();
       
-      // `get` can use `exists()` for fine-grained checks on single document reads.
-      allow get: if 
-          isAdmin() || 
-          (isTeacher() && resource.data.teacherId == request.auth.uid) ||
-          (isStudent() && getStudentRegNo() == resource.data.studentId && resource.data.status in ['Approved', 'Resolved']);
-
-      // `list` is for queries and CANNOT use `get()` or `exists()`.
-      // The rules must align with the `where` clauses in the client-side queries.
-      allow list: if
-        // Admin: has no 'where' clause, so can read if they are an admin.
-        // We can't use isAdmin() here. We must check the auth token directly.
+      // This single `read` rule handles both `get` and `list` operations.
+      // CRITICAL: It does not perform any database lookups (no `get` or `exists` calls).
+      // It relies solely on the user's auth token and the document data itself.
+      allow read: if
+        // Admin: Can read any complaint if their email is an admin email.
         (request.auth.token.email.split('@')[1] == 'admin.com') ||
         
-        // Teacher: client query is `where('teacherId', '==', request.auth.uid)`
+        // Teacher: Can read a complaint if they are the author.
+        // This is secure because the client query MUST include `where('teacherId', '==', uid)`.
         (request.auth.uid == resource.data.teacherId) ||
 
-        // Student: client query is `where('studentId', '==', X)` and `where('status', 'in', ...)`
+        // Student: Can read a complaint if it is against them and its status is not 'Pending'.
+        // This is secure because the client query MUST include `where('studentId', '==', ...)`
+        // and `where('status', 'in', ...)`.
         (
           request.auth.token.email == resource.data.studentId + '@student.com' &&
           resource.data.status in ['Approved', 'Resolved']
