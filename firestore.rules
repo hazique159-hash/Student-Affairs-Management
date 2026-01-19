@@ -153,14 +153,14 @@ service cloud.firestore {
      * @path /complaints/{complaintId}
      * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
      * @allow (update, delete) If the user is an admin (to approve/resolve status).
-     * @allow (read) Allows a read if the user is the teacher who created it, or the student it's about. This rule is query-compatible.
-     *               Admin access for reads is currently disabled to allow teacher/student queries to function.
+     * @allow (read) Allows a read if the user is the teacher who created it, OR if they are the student it is about (once approved/resolved).
+     *               This simplified rule is necessary to support Firestore queries from the client, which cannot handle complex OR conditions with `exists` or `get` calls.
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAdmin();
-      allow read: if request.auth.uid == resource.data.teacherId
-                 || (
+      allow read: if (request.auth.uid == resource.data.teacherId) ||
+                 (
                     request.auth.token.email_verified &&
                     request.auth.email == resource.data.studentId + '@student.com' &&
                     resource.data.status in ['Approved', 'Resolved']
