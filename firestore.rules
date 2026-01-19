@@ -151,9 +151,9 @@ service cloud.firestore {
       // CRITICAL: This rule MUST NOT use `get()` or `exists()` to be valid for LIST queries.
       // It must rely solely on the user's auth token and the data in the document being read.
       allow read: if isSignedIn() && (
-        // Condition for Admins (identified by special email domain).
-        // This allows an admin's broad query for all complaints to succeed.
-        (request.auth.token.email != null && request.auth.token.email.endsWith('@admin.com'))
+        // Condition for Admins: True if their email ends with @admin.com AND they query on `dateSubmitted`.
+        // This links the query to the rule to satisfy the validator.
+        (request.auth.token.email != null && request.auth.token.email.endsWith('@admin.com') && resource.data.dateSubmitted > timestamp.fromMillis(0))
         ||
         // Condition for Teachers (identified by UID match on the complaint's teacherId).
         // This allows a teacher's query for their own complaints to succeed.

@@ -128,7 +128,9 @@ const AdminComplaintsView = () => {
       firestore
         ? query(
             collection(firestore, 'complaints'),
-            where('status', 'in', ['Pending', 'Approved', 'Resolved'])
+            // This constraint is required to satisfy the security rule validator.
+            // It matches the admin's permission branch in the rule.
+            where('dateSubmitted', '>', '1970-01-01T00:00:00.000Z')
           )
         : null,
     [firestore]
