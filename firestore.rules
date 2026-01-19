@@ -161,17 +161,23 @@ service cloud.firestore {
       // Update and delete are restricted to admins.
       allow update, delete: if isAdmin();
       
-      // A simple 'list' rule allows queries to run. The 'get' rule below secures the data.
-      allow list: if isSignedIn();
+      // Unified read rule for get and list operations.
+      // This rule MUST NOT contain get() or exists() to be compatible with queries.
+      allow read: if
+        // 1. Admin Access: Admins can read all complaints.
+        // This check is on the auth token, so it's valid for queries.
+        request.auth.token.email.endsWith('@admin.com') ||
 
-      // 'get' rule enforces document-level access for different roles.
-      allow get: if isAdmin() || // Admins can read any complaint.
-                    (resource.data.teacherId == request.auth.uid) || // Teachers can read complaints they created.
-                    ( // Students can read approved/resolved complaints against them.
-                      isStudent() && 
-                      resource.data.studentId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId && 
-                      resource.data.status != 'Pending'
-                    );
+        // 2. Teacher Access: Teachers can read complaints they submitted.
+        // This requires a `where('teacherId', '==', request.auth.uid)` clause in the client query.
+        (resource.data.teacherId == request.auth.uid) ||
+
+        // 3. Student Access: Students can read their own *approved/resolved* complaints.
+        // This requires a `where('studentId', '==', <student-reg-id>)` clause in the client query.
+        (
+          request.auth.token.email == resource.data.studentId + '@student.com' &&
+          resource.data.status != 'Pending'
+        );
     }
 
     /**
@@ -207,5 +213,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
