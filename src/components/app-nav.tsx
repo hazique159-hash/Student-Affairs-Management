@@ -13,6 +13,7 @@ import {
   Users,
   UserPlus,
   CircleDollarSign,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -38,6 +39,7 @@ const baseNavItems = [
 
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
+  { href: '/my-complaints', icon: ShieldAlert, label: 'My Complaints', roles: ['student'] },
 ];
 
 const adminNavOrder = [
@@ -98,3 +100,5 @@ export function AppNav() {
     </SidebarMenu>
   );
 }
+
+    

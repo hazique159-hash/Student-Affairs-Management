@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { students as staticStudents, predefinedViolations } from '@/lib/data';
+import { predefinedViolations } from '@/lib/data';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,12 +31,16 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, addDoc, setDoc } from 'firebase/firestore';
+import {
+  useFirestore,
+  useUser,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { Student } from '@/lib/types';
-
 
 const complaintSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
@@ -53,13 +57,13 @@ export default function RegisterComplaintPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
-  const isAdmin = user?.email?.includes('admin');
 
   const studentsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'students') : null),
     [firestore]
   );
-  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
+  const { data: students, isLoading: isLoadingStudents } =
+    useCollection<Student>(studentsRef);
 
   const form = useForm<z.infer<typeof complaintSchema>>({
     resolver: zodResolver(complaintSchema),
@@ -99,25 +103,14 @@ export default function RegisterComplaintPage() {
     };
 
     try {
-      // All users with teacher roles can write to their own subcollection
-      const teacherComplaintsRef = collection(
-        firestore,
-        `teachers/${user.uid}/complaints`
-      );
-      const newComplaintDocRef = await addDoc(teacherComplaintsRef, complaintData);
+      const complaintsRef = collection(firestore, 'complaints');
+      await addDoc(complaintsRef, complaintData);
 
-      // Only admins also write to the root collection for aggregation
-      if (isAdmin) {
-        const rootComplaintRef = doc(firestore, 'complaints', newComplaintDocRef.id);
-        await setDoc(rootComplaintRef, complaintData);
-      }
-      
       toast({
         title: 'Complaint Submitted',
-        description: 'Your complaint has been successfully submitted.',
+        description: 'Your complaint has been successfully submitted for review.',
       });
       router.push('/complaints');
-
     } catch (error: any) {
       console.error('Error submitting complaint:', error);
       toast({
@@ -159,7 +152,13 @@ export default function RegisterComplaintPage() {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={isLoadingStudents ? "Loading students..." : "Select a student"} />
+                          <SelectValue
+                            placeholder={
+                              isLoadingStudents
+                                ? 'Loading students...'
+                                : 'Select a student'
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -191,10 +190,7 @@ export default function RegisterComplaintPage() {
                       </FormControl>
                       <SelectContent>
                         {predefinedViolations.map((violation) => (
-                          <SelectItem
-                            key={violation}
-                            value={violation}
-                          >
+                          <SelectItem key={violation} value={violation}>
                             {violation}
                           </SelectItem>
                         ))}
@@ -224,7 +220,9 @@ export default function RegisterComplaintPage() {
             </CardContent>
             <CardFooter className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {form.formState.isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Submit Complaint
               </Button>
             </CardFooter>
@@ -234,3 +232,4 @@ export default function RegisterComplaintPage() {
     </div>
   );
 }
+    

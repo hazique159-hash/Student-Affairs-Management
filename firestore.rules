@@ -14,7 +14,7 @@
  * - /students/{studentId}: Student profiles.
  * - /users/{userId}: Core user data linking auth UID to student profile.
  * - /announcements/{announcementId}: Public announcements.
- * - /teachers/{teacherId}/complaints/{complaintId}: Complaints submitted by teachers.
+ * - /complaints/{complaintId}: Centralized collection for all complaints.
  * - /users/{userId}/counselingSessions/{counselingSessionId}: Counseling sessions for individual students.
  * - /users/{userId}/fines/{fineId}: Fines issued to individual students.
  *
@@ -23,6 +23,7 @@
  * - Teacher role is determined by the existence of a a document in `/teachers/{teacherId}`.
  * - User listing is generally disallowed to protect privacy, except for students list for teachers and admins.
  * - Data under `/users/{userId}` is strictly accessible only by the authenticated user matching the `userId`.
+ * - Complaint visibility is tightly controlled: teachers see their own, admins see all, and students see their own approved/resolved complaints.
  *
  * Denormalization for Authorization:
  * - Admin and Teacher privileges are checked using the existence of documents in their respective collections. This avoids complex queries within the rules.
@@ -141,33 +142,25 @@ service cloud.firestore {
     }
     
     /**
-     * @description Rules for the root complaints collection (for admin view).
+     * @description Rules for the centralized complaints collection.
      * @path /complaints/{complaintId}
-     * @allow (read) If the user is an admin.
-     * @allow (create) If the user is a teacher.
-     * @principle Admin read access for aggregated view, teacher write access.
+     * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
+     * @allow (read) If the user is an admin, the teacher who created it, or the student it's about (only if approved/resolved).
+     * @allow (update) If the user is an admin (to approve/resolve status).
+     * @allow (delete) If the user is an admin.
+     * @principle Enforces the complaint lifecycle from submission to resolution.
      */
     match /complaints/{complaintId} {
-      allow read: if isAdmin();
-      allow create: if isTeacher();
-    }
-
-    /**
-     * @description Rules for the complaints subcollection under teachers.
-     * @path /teachers/{teacherId}/complaints/{complaintId}
-     * @allow (create) If the user is a teacher and the teacherId matches the authenticated user's ID. Also requires that `teacherId` in the document matches the path.
-     * @deny (create) If the user is not a teacher or the teacherId does not match the authenticated user's ID.
-     * @allow (get, list) If the user is an admin or the teacher themselves.
-     * @deny (get, list) If the user is not an admin or the teacher themselves.
-     * @allow (update, delete) If the user is an admin.
-     * @deny (update, delete) If the user is not an admin.
-     * @principle Enforces teacher-submitted complaints and admin oversight.
-     */
-    match /teachers/{teacherId}/complaints/{complaintId} {
-        allow create: if isOwner(teacherId) && request.resource.data.teacherId == teacherId;
-        allow get, list: if isAdmin() || isOwner(teacherId);
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow read: if isAdmin() || 
+                     (isTeacher() && resource.data.teacherId == request.auth.uid) ||
+                     (
+                        isSignedIn() && 
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
+                        (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
+                     );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
@@ -205,5 +198,4 @@ service cloud.firestore {
     }
   }
 }
-
     

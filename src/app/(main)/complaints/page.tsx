@@ -14,8 +14,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Complaint } from '@/lib/types';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import {
+  useCollection,
+  useFirestore,
+  useUser,
+  useMemoFirebase,
+} from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useMemo } from 'react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { doc } from 'firebase/firestore';
@@ -32,21 +37,15 @@ const ComplaintTable = ({
 }) => {
   const firestore = useFirestore();
 
-  const handleApprove = (teacherId: string, complaintId: string) => {
+  const handleApprove = (complaintId: string) => {
     if (!firestore) return;
-    const complaintRef = doc(
-      firestore,
-      `teachers/${teacherId}/complaints/${complaintId}`
-    );
+    const complaintRef = doc(firestore, `complaints/${complaintId}`);
     updateDocumentNonBlocking(complaintRef, { status: 'Approved' });
   };
 
-  const handleResolve = (teacherId: string, complaintId: string) => {
+  const handleResolve = (complaintId: string) => {
     if (!firestore) return;
-    const complaintRef = doc(
-      firestore,
-      `teachers/${teacherId}/complaints/${complaintId}`
-    );
+    const complaintRef = doc(firestore, `complaints/${complaintId}`);
     updateDocumentNonBlocking(complaintRef, { status: 'Resolved' });
   };
 
@@ -103,9 +102,7 @@ const ComplaintTable = ({
                     {isAdmin && complaint.status === 'Pending' && (
                       <Button
                         size="sm"
-                        onClick={() =>
-                          handleApprove(complaint.teacherId, complaint.id)
-                        }
+                        onClick={() => handleApprove(complaint.id)}
                       >
                         Approve
                       </Button>
@@ -114,9 +111,7 @@ const ComplaintTable = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          handleResolve(complaint.teacherId, complaint.id)
-                        }
+                        onClick={() => handleResolve(complaint.id)}
                       >
                         Resolve
                       </Button>
@@ -139,20 +134,27 @@ export default function ComplaintsPage() {
   const { user } = useUser();
   const isAdmin = user?.email?.includes('admin') ?? false;
 
-  // This is not efficient. In a real app, you'd have a single collection
-  // for complaints with teacherId as a field to query against.
-  // For now, we'll fetch all complaints if admin, or only for the current teacher.
-  const complaintsRef = useMemoFirebase(() => {
+  const complaintsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
+
+    const complaintsCollection = collection(firestore, 'complaints');
+
     if (isAdmin) {
-      return collection(firestore, 'complaints'); // Assumes a root 'complaints' collection for admins
+      // Admin sees all complaints, ordered by date
+      return query(complaintsCollection, orderBy('dateSubmitted', 'desc'));
     }
-    return collection(firestore, `teachers/${user.uid}/complaints`);
+
+    // Teacher sees their own complaints
+    return query(
+      complaintsCollection,
+      where('teacherId', '==', user.uid),
+      orderBy('dateSubmitted', 'desc')
+    );
   }, [firestore, user, isAdmin]);
 
   const { data: complaints, isLoading } = useCollection<Complaint>(
-    complaintsRef as any
-  ); // We cast to any because the root collection doesn't match the path structure perfectly
+    complaintsQuery
+  );
 
   const pendingComplaints = useMemo(
     () => complaints?.filter((c) => c.status === 'Pending') ?? [],
@@ -210,3 +212,4 @@ export default function ComplaintsPage() {
     </div>
   );
 }
+    
