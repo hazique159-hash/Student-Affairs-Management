@@ -155,15 +155,16 @@ service cloud.firestore {
      * @allow (read) If the user is an admin, the teacher who created it, or the student it's about (only if approved/resolved).
      * @allow (update) If the user is an admin (to approve/resolve status).
      * @allow (delete) If the user is an admin.
-     * @principle Enforces the complaint lifecycle from submission to resolution.
+     * @principle Enforces the complaint lifecycle from submission to resolution. This rule is structured to be efficient for list queries.
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow read: if isAdmin() || 
-                     (isTeacher() && !isStudent() && resource.data.teacherId == request.auth.uid) ||
+                     (isTeacher() && resource.data.teacherId == request.auth.uid) ||
                      (
                         isStudent() &&
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
+                        // Derive studentId from email to avoid a 'get' call which breaks list queries
+                        resource.data.studentId == request.auth.token.email.split('@')[0] && 
                         (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
                      );
       allow update: if isAdmin();
