@@ -33,8 +33,8 @@
     {
       "id": "login-background",
       "description": "Background for login page",
-      "imageUrl": "https://images.unsplash.com/photo-1562774053-673738435128?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx1bml2ZXJzaXR5JTIwY2FtcHVzfGVufDB8fHx8MTcyMDc0ODc4NHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "university campus"
+      "imageUrl": "https://images.unsplash.com/photo-1607237138185-e894ee31b2af",
+      "imageHint": "university building"
     }
   ]
 }
