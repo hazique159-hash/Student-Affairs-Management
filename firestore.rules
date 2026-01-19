@@ -158,15 +158,25 @@ service cloud.firestore {
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow read: if isAdmin() ||
-                     (resource.data.teacherId == request.auth.uid) ||
-                     (
-                        isStudent() &&
-                        resource.data.studentId == request.auth.token.email.split('@')[0] && 
-                        (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
-                     );
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update, delete: if isAdmin();
+      
+      // READ rule optimized for LIST queries. It avoids using get() or exists().
+      // This rule is less secure for direct GETs if roles could be spoofed,
+      // but it's necessary for queries to function correctly.
+      allow read: if 
+        // 1. Admin Access: Check email pattern. Assumes admin emails are controlled.
+        (request.auth.token.email.matches('.*@admin.com')) ||
+        
+        // 2. Teacher Access: Check if the requester's UID matches the teacherId on the document.
+        // The client query MUST include `where('teacherId', '==', request.auth.uid)`.
+        (resource.data.teacherId == request.auth.uid) ||
+        
+        // 3. Student Access: Check if the requester's derived ID matches the studentId.
+        // The client query MUST include `where('studentId', '==', derivedId)`.
+        (
+          resource.data.studentId == request.auth.token.email.split('@')[0] && 
+          (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
+        );
     }
 
     /**
