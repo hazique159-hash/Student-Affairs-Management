@@ -50,7 +50,6 @@ export default function TeachersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Teacher ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -60,9 +59,6 @@ export default function TeachersPage() {
               {isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-48" />
-                    </TableCell>
                     <TableCell>
                       <Skeleton className="h-5 w-32" />
                     </TableCell>
@@ -79,8 +75,7 @@ export default function TeachersPage() {
               {!isLoading &&
                 teachers?.map((teacher) => (
                   <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">{teacher.id}</TableCell>
-                    <TableCell>{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
+                    <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
                     <TableCell>{teacher.email}</TableCell>
                     {isAdmin && (
                         <TableCell className="text-right">
