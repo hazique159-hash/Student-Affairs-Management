@@ -246,7 +246,7 @@ export default function ComplaintsPage() {
         return query(complaintsCollection, orderBy('dateSubmitted', 'desc'));
       case 'teacher':
         // Teachers see complaints they submitted
-        return query(complaintsCollection, where('teacherId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
+        return query(complaintsCollection, where('teacherId', '==', user.uid));
       case 'student':
         // Students see approved/resolved complaints against them
         if (!userProfile?.studentId) return null; // Wait for profile to load
