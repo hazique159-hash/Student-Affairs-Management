@@ -187,6 +187,7 @@ const AdminComplaintsView = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Student</TableHead>
+              <TableHead>Teacher</TableHead>
               <TableHead>Violation</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
@@ -194,9 +195,9 @@ const AdminComplaintsView = () => {
             </TableRow>
           </TableHeader>
           {isLoading ? (
-            <ComplaintsTableSkeleton columns={5} />
+            <ComplaintsTableSkeleton columns={6} />
           ) : !sortedComplaints.length ? (
-            <NoComplaintsRow columns={5} message="No complaints found." />
+            <NoComplaintsRow columns={6} message="No complaints found." />
           ) : (
             <TableBody>
               {sortedComplaints.map((complaint) => (
@@ -207,9 +208,10 @@ const AdminComplaintsView = () => {
                       {complaint.studentId}
                     </div>
                   </TableCell>
+                  <TableCell>{complaint.teacherName || 'N/A'}</TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
                   <TableCell>
-                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(complaint.status)}>
@@ -321,7 +323,7 @@ const TeacherComplaintsView = () => {
                   </TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
                    <TableCell>
-                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(complaint.status)}>
@@ -390,22 +392,24 @@ const StudentComplaintsView = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Date Submitted</TableHead>
+              <TableHead>Filed By</TableHead>
               <TableHead>Violation</TableHead>
               <TableHead>Details</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
           {isLoading ? (
-            <ComplaintsTableSkeleton columns={4} />
+            <ComplaintsTableSkeleton columns={5} />
           ) : !sortedComplaints.length ? (
-            <NoComplaintsRow columns={4} message="You have no approved complaints on your record." />
+            <NoComplaintsRow columns={5} message="You have no approved complaints on your record." />
           ) : (
             <TableBody>
               {sortedComplaints.map((complaint) => (
                 <TableRow key={complaint.id}>
                   <TableCell>
-                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
                   </TableCell>
+                  <TableCell>{complaint.teacherName || 'N/A'}</TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
                    <TableCell>
                     <ComplaintDetailsDialog complaint={complaint} />

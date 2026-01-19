@@ -89,9 +89,17 @@
           "type": "string",
           "description": "Reference to Student. (Relationship: Student 1:N Complaint)"
         },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the student who the complaint is about."
+        },
         "teacherId": {
           "type": "string",
           "description": "Reference to Teacher. (Relationship: Teacher 1:N Complaint)"
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Name of the teacher who submitted the complaint."
         },
         "violationType": {
           "type": "string",
@@ -114,7 +122,9 @@
       "required": [
         "id",
         "studentId",
+        "studentName",
         "teacherId",
+        "teacherName",
         "violationType",
         "details",
         "status",

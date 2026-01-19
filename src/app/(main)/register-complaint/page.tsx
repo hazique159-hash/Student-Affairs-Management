@@ -37,10 +37,10 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import type { Student } from '@/lib/types';
+import type { Student, Teacher } from '@/lib/types';
 
 const complaintSchema = z.object({
   studentId: z.string().min(1, { message: 'Please select a student.' }),
@@ -96,10 +96,23 @@ export default function RegisterComplaintPage() {
       return;
     }
 
+    let teacherName = 'Unknown';
+    try {
+        const teacherRef = doc(firestore, 'teachers', user.uid);
+        const teacherSnap = await getDoc(teacherRef);
+        if (teacherSnap.exists()) {
+            const teacherData = teacherSnap.data() as Teacher;
+            teacherName = `${teacherData.firstName} ${teacherData.lastName}`;
+        }
+    } catch(e) {
+        console.error("Could not fetch teacher name", e);
+    }
+
     const complaintData = {
       ...values,
       studentName: `${student.firstName} ${student.lastName}`,
       teacherId: user.uid,
+      teacherName: teacherName,
       status: 'Pending' as 'Pending' | 'Approved' | 'Resolved',
       dateSubmitted: serverTimestamp(),
     };
