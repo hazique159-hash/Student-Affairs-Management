@@ -73,6 +73,14 @@ service cloud.firestore {
     function isStudent() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
+    
+    /**
+     * @description Retrieves the student registration number from their user document.
+     * @return {string} The student's registration number.
+     */
+    function getStudentRegNo() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId;
+    }
 
 
     /**
@@ -161,21 +169,23 @@ service cloud.firestore {
       // Update and delete are restricted to admins.
       allow update, delete: if isAdmin();
       
-      // Unified read rule for get and list operations.
-      // A query's constraints must be at least as specific as the rule's constraints.
-      allow read: if
-        // 1. Admin Access: Admins can read all complaints.
-        // This is checked via a function that performs an exists() check. This is valid for read rules but not list rules.
-        // However, since the client query for admin has no 'where' clause, this branch allows full reads.
-        isAdmin() ||
+      // `get` can use `exists()` for fine-grained checks on single document reads.
+      allow get: if 
+          isAdmin() || 
+          (isTeacher() && resource.data.teacherId == request.auth.uid) ||
+          (isStudent() && getStudentRegNo() == resource.data.studentId && resource.data.status in ['Approved', 'Resolved']);
 
-        // 2. Teacher Access: Teachers can read complaints they submitted.
-        // This requires a `where('teacherId', '==', request.auth.uid)` clause in the client query.
-        (resource.data.teacherId == request.auth.uid) ||
+      // `list` is for queries and CANNOT use `get()` or `exists()`.
+      // The rules must align with the `where` clauses in the client-side queries.
+      allow list: if
+        // Admin: has no 'where' clause, so can read if they are an admin.
+        // We can't use isAdmin() here. We must check the auth token directly.
+        (request.auth.token.email.split('@')[1] == 'admin.com') ||
+        
+        // Teacher: client query is `where('teacherId', '==', request.auth.uid)`
+        (request.auth.uid == resource.data.teacherId) ||
 
-        // 3. Student Access: Students can read their own *approved/resolved* complaints.
-        // This requires `where('studentId', '==', <student-reg-id>)` AND 
-        // `where('status', 'in', ['Approved', 'Resolved'])` clauses in the client query.
+        // Student: client query is `where('studentId', '==', X)` and `where('status', 'in', ...)`
         (
           request.auth.token.email == resource.data.studentId + '@student.com' &&
           resource.data.status in ['Approved', 'Resolved']
@@ -215,3 +225,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
