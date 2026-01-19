@@ -155,7 +155,8 @@ service cloud.firestore {
       allow read: if isAdmin() || 
                      (isTeacher() && resource.data.teacherId == request.auth.uid) ||
                      (
-                        isSignedIn() && 
+                        isSignedIn() &&
+                        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
                         (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
                      );
