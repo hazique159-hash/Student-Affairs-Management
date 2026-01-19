@@ -37,7 +37,7 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { Student } from '@/lib/types';
@@ -101,7 +101,7 @@ export default function RegisterComplaintPage() {
       studentName: `${student.firstName} ${student.lastName}`,
       teacherId: user.uid,
       status: 'Pending' as 'Pending' | 'Approved' | 'Resolved',
-      dateSubmitted: new Date().toISOString(),
+      dateSubmitted: serverTimestamp(),
     };
 
     try {

@@ -14,7 +14,7 @@ export type Complaint = {
   id: string;
   studentId: string;
   studentName: string;
-  dateSubmitted: string;
+  dateSubmitted: any;
   violationType: string;
   teacherId: string;
   status: 'Pending' | 'Approved' | 'Resolved';

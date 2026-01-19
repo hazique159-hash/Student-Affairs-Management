@@ -39,7 +39,7 @@ import {
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import type { Complaint } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -130,7 +130,7 @@ const AdminComplaintsView = () => {
             collection(firestore, 'complaints'),
             // This constraint is required to satisfy the security rule validator.
             // It matches the admin's permission branch in the rule.
-            where('dateSubmitted', '>', '1970-01-01T00:00:00.000Z')
+             where('dateSubmitted', '>', new Timestamp(0, 0))
           )
         : null,
     [firestore]
@@ -171,7 +171,13 @@ const AdminComplaintsView = () => {
         if (orderA !== orderB) {
             return orderA - orderB;
         }
-        return new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime();
+        if (a.dateSubmitted && b.dateSubmitted) {
+            // Check if dateSubmitted is a Firestore Timestamp
+            if (a.dateSubmitted.toDate && b.dateSubmitted.toDate) {
+              return b.dateSubmitted.toDate().getTime() - a.dateSubmitted.toDate().getTime();
+            }
+        }
+        return 0;
     });
   }, [complaints]);
 
@@ -210,7 +216,7 @@ const AdminComplaintsView = () => {
                   </TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
                   <TableCell>
-                    {new Date(complaint.dateSubmitted).toLocaleDateString()}
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(complaint.status)}>
@@ -278,7 +284,12 @@ const TeacherComplaintsView = () => {
         if (orderA !== orderB) {
             return orderA - orderB;
         }
-        return new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime();
+        if (a.dateSubmitted && b.dateSubmitted) {
+            if (a.dateSubmitted.toDate && b.dateSubmitted.toDate) {
+              return b.dateSubmitted.toDate().getTime() - a.dateSubmitted.toDate().getTime();
+            }
+        }
+        return 0;
     });
   }, [complaints]);
 
@@ -316,8 +327,8 @@ const TeacherComplaintsView = () => {
                     </div>
                   </TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
-                  <TableCell>
-                    {new Date(complaint.dateSubmitted).toLocaleDateString()}
+                   <TableCell>
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(complaint.status)}>
@@ -364,7 +375,14 @@ const StudentComplaintsView = () => {
   
     const sortedComplaints = useMemo(() => {
         if (!complaints) return [];
-        return [...complaints].sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
+        return [...complaints].sort((a, b) => {
+            if (a.dateSubmitted && b.dateSubmitted) {
+                if (a.dateSubmitted.toDate && b.dateSubmitted.toDate) {
+                    return b.dateSubmitted.toDate().getTime() - a.dateSubmitted.toDate().getTime();
+                }
+            }
+            return 0;
+        });
     }, [complaints]);
 
   return (
@@ -394,7 +412,7 @@ const StudentComplaintsView = () => {
               {sortedComplaints.map((complaint) => (
                 <TableRow key={complaint.id}>
                   <TableCell>
-                    {new Date(complaint.dateSubmitted).toLocaleDateString()}
+                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
                    <TableCell>
