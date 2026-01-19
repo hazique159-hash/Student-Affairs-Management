@@ -17,30 +17,35 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import type { Fine } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { fines as allFines } from '@/lib/data';
 
 export default function MyFinesPage() {
-  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-
-  const finesRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/fines`);
-  }, [firestore, user]);
-
-  const { data: fines, isLoading } = useCollection<Fine>(finesRef);
 
   useEffect(() => {
       if (!isUserLoading && !user) {
           router.push('/login');
       }
   }, [isUserLoading, user, router]);
+
+  const studentId = useMemo(() => {
+    if (!user?.email) return null;
+    // Assuming student ID is the part of the email before the '@'
+    return user.email.split('@')[0];
+  }, [user]);
+
+  const fines = useMemo(() => {
+    if (!studentId) return [];
+    return allFines.filter(fine => fine.studentId === studentId);
+  }, [studentId]);
+
+  const isLoading = isUserLoading;
 
   return (
     <div className="space-y-8">
@@ -94,11 +99,13 @@ export default function MyFinesPage() {
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    You have no fines. Great job!
-                  </TableCell>
-                </TableRow>
+                !isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center h-24">
+                      You have no fines. Great job!
+                    </TableCell>
+                  </TableRow>
+                )
               )}
             </TableBody>
           </Table>

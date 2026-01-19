@@ -43,6 +43,7 @@ import type { Complaint } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { complaints as allComplaints } from '@/lib/data';
 
 // ============================================================================
 // Shared Helper Components
@@ -347,7 +348,6 @@ const TeacherComplaintsView = () => {
 // Student View
 // ============================================================================
 const StudentComplaintsView = () => {
-    const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
 
     const studentId = useMemo(() => {
@@ -355,27 +355,19 @@ const StudentComplaintsView = () => {
         return user.email.split('@')[0];
     }, [user]);
   
-    const complaintsQuery = useMemoFirebase(() => {
-      if (!firestore || !studentId) return null;
-      return query(
-        collection(firestore, 'complaints'),
-        where('studentId', '==', studentId),
-        where('status', 'in', ['Approved', 'Resolved'])
-      );
-    }, [firestore, studentId]);
+    const complaints = useMemo(() => {
+        if (!studentId) return [];
+        return allComplaints.filter(c => 
+            c.studentId === studentId && (c.status === 'Approved' || c.status === 'Resolved')
+        );
+    }, [studentId]);
   
-    const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsQuery);
-    const isLoading = isUserLoading || isLoadingComplaints;
+    const isLoading = isUserLoading;
   
     const sortedComplaints = useMemo(() => {
         if (!complaints) return [];
         return [...complaints].sort((a, b) => {
-            if (a.dateSubmitted && b.dateSubmitted) {
-                if (a.dateSubmitted.toDate && b.dateSubmitted.toDate) {
-                    return b.dateSubmitted.toDate().getTime() - a.dateSubmitted.toDate().getTime();
-                }
-            }
-            return 0;
+            return new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime();
         });
     }, [complaints]);
 
@@ -407,7 +399,7 @@ const StudentComplaintsView = () => {
               {sortedComplaints.map((complaint) => (
                 <TableRow key={complaint.id}>
                   <TableCell>
-                    {complaint.dateSubmitted?.toDate ? complaint.dateSubmitted.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                    {complaint.dateSubmitted ? new Date(complaint.dateSubmitted).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
                   </TableCell>
                   <TableCell>{complaint.teacherName || 'N/A'}</TableCell>
                   <TableCell>{complaint.violationType}</TableCell>
