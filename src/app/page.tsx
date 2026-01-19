@@ -16,7 +16,7 @@ export default function RootPage() {
         } else if (email.endsWith('@student.com')) {
           redirect('/announcements');
         } else {
-          redirect('/students');
+          redirect('/complaints');
         }
       } else {
         redirect('/login');

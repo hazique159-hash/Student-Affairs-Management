@@ -107,7 +107,7 @@ export default function LoginPage() {
       } else if (isStudent) {
         router.push('/announcements');
       } else {
-        router.push('/students');
+        router.push('/complaints');
       }
     } catch (error: any) {
       console.error(error);
