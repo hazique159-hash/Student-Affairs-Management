@@ -10,7 +10,14 @@ export default function RootPage() {
   useEffect(() => {
     if (!isUserLoading) {
       if (user) {
-        redirect('/announcements');
+        const email = user.email || '';
+        if (email.endsWith('@admin.com')) {
+          redirect('/analytics');
+        } else if (email.endsWith('@student.com')) {
+          redirect('/announcements');
+        } else {
+          redirect('/students');
+        }
       } else {
         redirect('/login');
       }

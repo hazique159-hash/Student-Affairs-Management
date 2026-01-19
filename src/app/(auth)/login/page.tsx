@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter }from 'next/navigation';
@@ -96,8 +95,10 @@ export default function LoginPage() {
       
       if (isAdmin) {
           router.push('/analytics');
-      } else {
+      } else if (isStudent) {
           router.push('/announcements');
+      } else {
+          router.push('/students');
       }
 
     } catch (error: any) {
