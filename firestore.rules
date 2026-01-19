@@ -65,6 +65,14 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
+    /**
+     * @description Checks if the user is a student by verifying the existence of a document in the users collection.
+     * @return {boolean} True if the user is a student, false otherwise.
+     */
+    function isStudent() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
 
     /**
      * @description Rules for the admin roles collection.
@@ -85,10 +93,9 @@ service cloud.firestore {
      * @path /teachers/{teacherId}
      * @allow (create) If the user is an admin (to add new teachers).
      * @deny (create) If the user is not an admin.
-     * @allow (get, list) If the user is an admin or the teacher themselves.
-     * @deny (get, list) If the user is not an admin or the teacher themselves.
+     * @allow (get) If the user is the owner or an admin.
+     * @allow (list) If the user is an admin.
      * @allow (update, delete) If the user is an admin.
-     * @deny (update, delete) If the user is not an admin.
      * @principle Enforces teacher role management and data access control.
      */
     match /teachers/{teacherId} {
@@ -153,10 +160,9 @@ service cloud.firestore {
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow read: if isAdmin() || 
-                     (isTeacher() && resource.data.teacherId == request.auth.uid) ||
+                     (isTeacher() && !isStudent() && resource.data.teacherId == request.auth.uid) ||
                      (
-                        isSignedIn() &&
-                        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                        isStudent() &&
                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
                         (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
                      );
@@ -199,4 +205,3 @@ service cloud.firestore {
     }
   }
 }
-    
