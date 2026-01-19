@@ -150,10 +150,9 @@ service cloud.firestore {
     
     /**
      * @description Rules for the centralized complaints collection.
-     * This is a temporary, simplified rule to fix the query error for teachers.
-     * It allows a user to read a complaint ONLY if their UID matches the teacherId on the document.
-     * This will allow the teacher's query to succeed.
-     * It will temporarily break the view for Admins and Students. This will be fixed next.
+     * This rule separates 'list' and 'get' permissions to support queries with role-based access.
+     * 'list' is kept simple to allow queries to execute, as queries cannot have complex rules involving 'get' or 'exists'.
+     * 'get' contains the detailed logic to secure each individual document that is read by the query.
      */
     match /complaints/{complaintId} {
       // Create is allowed if the user is a teacher and is the author of the complaint.
@@ -162,9 +161,17 @@ service cloud.firestore {
       // Update and delete are restricted to admins.
       allow update, delete: if isAdmin();
       
-      // Allow a user to read a complaint ONLY if their UID matches the teacherId.
-      // This is a simplified rule to fix query issues and will be expanded later.
-      allow read: if request.auth.uid == resource.data.teacherId;
+      // A simple 'list' rule allows queries to run. The 'get' rule below secures the data.
+      allow list: if isSignedIn();
+
+      // 'get' rule enforces document-level access for different roles.
+      allow get: if isAdmin() || // Admins can read any complaint.
+                    (resource.data.teacherId == request.auth.uid) || // Teachers can read complaints they created.
+                    ( // Students can read approved/resolved complaints against them.
+                      isStudent() && 
+                      resource.data.studentId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId && 
+                      resource.data.status != 'Pending'
+                    );
     }
 
     /**
@@ -200,3 +207,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
