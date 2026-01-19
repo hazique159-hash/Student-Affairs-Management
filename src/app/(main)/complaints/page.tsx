@@ -126,12 +126,7 @@ const AdminComplaintsView = () => {
   const complaintsQuery = useMemoFirebase(
     () =>
       firestore
-        ? query(
-            collection(firestore, 'complaints'),
-            // This constraint is required to satisfy the security rule validator.
-            // It matches the admin's permission branch in the rule.
-             where('dateSubmitted', '>', new Timestamp(0, 0))
-          )
+        ? query(collection(firestore, 'complaints'))
         : null,
     [firestore]
   );
