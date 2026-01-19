@@ -96,8 +96,6 @@ export default function LoginPage() {
       
       if (isAdmin) {
           router.push('/analytics');
-      } else if(isStudent) {
-          router.push('/my-fines');
       } else {
           router.push('/announcements');
       }
