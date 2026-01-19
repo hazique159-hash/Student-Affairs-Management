@@ -1,6 +1,7 @@
 'use client';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { useRouter }from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,9 +27,12 @@ import { ShieldQuestion, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formSchema = z.object({
-  email: z.string().min(1, { message: 'Please enter a valid email or registration number.' }),
+  email: z
+    .string()
+    .min(1, { message: 'Please enter a valid email or registration number.' }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
@@ -41,6 +45,8 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { auth } = useFirebase();
 
+  const loginBg = PlaceHolderImages.find((p) => p.id === 'login-background');
+
   useEffect(() => {
     // This function will run on the client side to set up the initial admin user.
     const setupAdmin = async () => {
@@ -50,10 +56,13 @@ export default function LoginPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: 'admin@admin.com', password: 'admin123' }),
+          body: JSON.stringify({
+            email: 'admin@admin.com',
+            password: 'admin123',
+          }),
         });
       } catch (error) {
-        console.error("Failed to setup admin user:", error);
+        console.error('Failed to setup admin user:', error);
       } finally {
         setIsSetup(true);
       }
@@ -74,16 +83,16 @@ export default function LoginPage() {
     let emailToLogin = values.email;
     // Simple check to see if it's a student registration number
     if (!values.email.includes('@')) {
-        emailToLogin = `${values.email}@student.com`;
+      emailToLogin = `${values.email}@student.com`;
     }
 
     try {
-      if (!auth) throw new Error("Auth service not available");
+      if (!auth) throw new Error('Auth service not available');
       await signInWithEmailAndPassword(auth, emailToLogin, values.password);
-      
+
       const isAdmin = emailToLogin.endsWith('@admin.com');
       const isStudent = emailToLogin.endsWith('@student.com');
-      
+
       let role = 'Teacher';
       if (isAdmin) role = 'Admin';
       if (isStudent) role = 'Student';
@@ -92,15 +101,14 @@ export default function LoginPage() {
         title: 'Login Successful',
         description: `Welcome back, ${role}!`,
       });
-      
-      if (isAdmin) {
-          router.push('/analytics');
-      } else if (isStudent) {
-          router.push('/announcements');
-      } else {
-          router.push('/students');
-      }
 
+      if (isAdmin) {
+        router.push('/analytics');
+      } else if (isStudent) {
+        router.push('/announcements');
+      } else {
+        router.push('/students');
+      }
     } catch (error: any) {
       console.error(error);
       toast({
@@ -114,65 +122,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="flex justify-center items-center mb-4">
-            <ShieldQuestion className="h-10 w-10 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">AffairsConnect</CardTitle>
-          <CardDescription>
-            Login to your Account
-          </CardDescription>
-        </CardHeader>
-        {!isSetup ? (
-          <CardContent className="flex justify-center items-center p-10">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </CardContent>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email or Registration No.</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="user@example.com or BCS223089"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-              <CardFooter className="flex flex-col">
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
-        )}
-      </Card>
+    <div className="relative min-h-screen w-full">
+      {loginBg && (
+        <Image
+          src={loginBg.imageUrl}
+          alt={loginBg.description}
+          data-ai-hint={loginBg.imageHint}
+          fill
+          className="object-cover"
+        />
+      )}
+      <div className="absolute inset-0 bg-black/50" />
+      <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="flex justify-center items-center mb-4">
+              <ShieldQuestion className="h-10 w-10 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">AffairsConnect</CardTitle>
+            <CardDescription>Login to your Account</CardDescription>
+          </CardHeader>
+          {!isSetup ? (
+            <CardContent className="flex justify-center items-center p-10">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="grid gap-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email or Registration No.</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="user@example.com or BCS223089"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+                <CardFooter className="flex flex-col">
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Sign In
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

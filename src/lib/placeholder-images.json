@@ -29,6 +29,12 @@
       "description": "Student avatar 4",
       "imageUrl": "https://images.unsplash.com/photo-1617615857188-32f06ecc2089?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c3R1ZGVudCUyMHBvcnRyYWl0fGVufDB8fHx8MTc2MzMzNjMwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "student portrait"
+    },
+    {
+      "id": "login-background",
+      "description": "Background for login page",
+      "imageUrl": "https://images.unsplash.com/photo-1607237138185-e894ee31b2af?w=1920&q=80",
+      "imageHint": "university building"
     }
   ]
 }
