@@ -79,6 +79,26 @@ body {
     --sidebar-border: 217.2 32.6% 17.5%;
     --sidebar-ring: 231 48% 51%;
   }
+
+  .portal-background-effect {
+    --background: 204 86% 94% / 0.1;
+    --card: 0 0% 100% / 0.7;
+    --popover: 0 0% 100% / 0.9;
+    --sidebar-background: 0 0% 100% / 0.6;
+    --sidebar-border: 214.3 31.8% 91.4% / 0.4;
+    --border: 214.3 31.8% 91.4% / 0.2;
+    --muted: 210 40% 96.1% / 0.7;
+  }
+  
+  .dark .portal-background-effect {
+    --background: 222.2 84% 4.9% / 0.1;
+    --card: 222.2 84% 10% / 0.75;
+    --popover: 222.2 84% 4.9% / 0.9;
+    --sidebar-background: 222.2 84% 4.9% / 0.6;
+    --sidebar-border: 217.2 32.6% 17.5% / 0.4;
+    --border: 217.2 32.6% 17.5% / 0.2;
+    --muted: 217.2 32.6% 17.5% / 0.7;
+  }
 }
 
 @layer base {

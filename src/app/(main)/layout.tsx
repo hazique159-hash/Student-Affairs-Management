@@ -15,6 +15,8 @@ import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function MainLayout({
   children,
@@ -23,6 +25,7 @@ export default function MainLayout({
 }) {
   const { auth, user, isUserLoading } = useFirebase();
   const router = useRouter();
+  const portalBg = PlaceHolderImages.find((p) => p.id === 'login-background');
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -71,55 +74,69 @@ export default function MainLayout({
   const role = getRole();
 
   return (
-    <SidebarProvider>
-      <Sidebar variant="inset">
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center gap-2 p-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-            >
-              <ShieldQuestion className="h-5 w-5" />
-            </Button>
-            <div className="flex flex-col">
-              <h2 className="text-lg font-semibold font-headline">
-                AffairsConnect
-              </h2>
-            </div>
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <AppNav />
-        </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <div className="flex items-center gap-2 p-2">
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium truncate">
-                {user.email || user.uid}
-              </span>
-              <span className="text-xs text-muted-foreground truncate">
-                {role === 'Admin' ? 'Supervisor' : role}
-              </span>
-            </div>
-            <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout}>
-              <LogOut />
-            </Button>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-sm md:hidden">
-          <SidebarTrigger />
-          <div className="flex items-center gap-2">
-            <ShieldQuestion className="h-6 w-6 text-primary" />
-            <h2 className="text-lg font-semibold font-headline">
-              AffairsConnect
-            </h2>
-          </div>
-        </header>
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="relative min-h-screen w-full">
+      {portalBg && (
+        <Image
+          src={portalBg.imageUrl}
+          alt={portalBg.description}
+          data-ai-hint={portalBg.imageHint}
+          fill
+          className="object-cover blur-sm -z-10"
+        />
+      )}
+      <div className="absolute inset-0 bg-black/50 -z-10" />
+      <div className="portal-background-effect">
+        <SidebarProvider>
+          <Sidebar variant="inset">
+            <SidebarHeader className="border-b border-sidebar-border">
+              <div className="flex items-center gap-2 p-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+                >
+                  <ShieldQuestion className="h-5 w-5" />
+                </Button>
+                <div className="flex flex-col">
+                  <h2 className="text-lg font-semibold font-headline">
+                    AffairsConnect
+                  </h2>
+                </div>
+              </div>
+            </SidebarHeader>
+            <SidebarContent>
+              <AppNav />
+            </SidebarContent>
+            <SidebarFooter className="border-t border-sidebar-border">
+              <div className="flex items-center gap-2 p-2">
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-sm font-medium truncate">
+                    {user.email || user.uid}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {role === 'Admin' ? 'Supervisor' : role}
+                  </span>
+                </div>
+                <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout}>
+                  <LogOut />
+                </Button>
+              </div>
+            </SidebarFooter>
+          </Sidebar>
+          <SidebarInset>
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-sm md:hidden">
+              <SidebarTrigger />
+              <div className="flex items-center gap-2">
+                <ShieldQuestion className="h-6 w-6 text-primary" />
+                <h2 className="text-lg font-semibold font-headline">
+                  AffairsConnect
+                </h2>
+              </div>
+            </header>
+            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+          </SidebarInset>
+        </SidebarProvider>
+      </div>
+    </div>
   );
 }
