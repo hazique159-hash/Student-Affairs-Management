@@ -84,7 +84,9 @@ export default function RegisterComplaintPage() {
       return;
     }
 
-    const student = students?.find((s) => s.id === values.studentId);
+    const student = students?.find(
+      (s) => s.registrationNumber === values.studentId
+    );
     if (!student) {
       toast({
         variant: 'destructive',
@@ -163,8 +165,12 @@ export default function RegisterComplaintPage() {
                       </FormControl>
                       <SelectContent>
                         {students?.map((student) => (
-                          <SelectItem key={student.id} value={student.id}>
-                            {student.firstName} {student.lastName} ({student.id})
+                          <SelectItem
+                            key={student.id}
+                            value={student.registrationNumber}
+                          >
+                            {student.firstName} {student.lastName} (
+                            {student.registrationNumber})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -232,4 +238,3 @@ export default function RegisterComplaintPage() {
     </div>
   );
 }
-    
