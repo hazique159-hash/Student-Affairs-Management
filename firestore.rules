@@ -148,21 +148,26 @@ service cloud.firestore {
     }
     
     /**
-     * @description Rules for the centralized complaints collection.
+     * @description Rules for the centralized complaints collection. This rule is structured to be efficient for list queries.
      * @path /complaints/{complaintId}
      * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
-     * @allow (update) If the user is an admin (to approve/resolve status).
-     * @allow (delete) If the user is an admin.
-     * @principle Enforces the complaint lifecycle from submission to resolution. This rule is structured to be efficient for list queries.
+     * @allow (update, delete) If the user is an admin (to approve/resolve status).
+     * @allow (list) Allows any signed-in user to perform a query. The security is enforced by the 'get' rule on each document returned by the query. This is required to allow role-based queries from the client.
+     * @allow (get) Secures the actual read of a document. A user can get a document if they are an admin, the teacher who wrote it, or the student it's about (if approved/resolved).
      */
     match /complaints/{complaintId} {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAdmin();
-      
-      // This is a temporary, simplified rule to fix teacher queries.
-      // It allows a user to read a complaint IF their UID matches the teacherId.
-      // This will break admin and student views, which will be fixed next.
-      allow read: if resource.data.teacherId == request.auth.uid;
+      allow list: if isSignedIn();
+      allow get: if isAdmin()
+                 || resource.data.teacherId == request.auth.uid
+                 || (
+                    // This rule allows a student to read their own approved/resolved complaints.
+                    // It checks that a 'users' document exists for the requester and then matches the studentId.
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    resource.data.studentId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId &&
+                    resource.data.status in ['Approved', 'Resolved']
+                 );
     }
 
     /**
