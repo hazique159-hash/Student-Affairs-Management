@@ -34,12 +34,11 @@ import {
 } from '@/components/ui/dialog';
 import {
   useCollection,
-  useDoc,
   useFirestore,
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import type { Complaint } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -167,7 +166,6 @@ const AdminComplaintsView = () => {
             return orderA - orderB;
         }
         if (a.dateSubmitted && b.dateSubmitted) {
-            // Check if dateSubmitted is a Firestore Timestamp
             if (a.dateSubmitted.toDate && b.dateSubmitted.toDate) {
               return b.dateSubmitted.toDate().getTime() - a.dateSubmitted.toDate().getTime();
             }
@@ -348,25 +346,24 @@ const TeacherComplaintsView = () => {
 // ============================================================================
 const StudentComplaintsView = () => {
     const firestore = useFirestore();
-    const { user } = useUser();
+    const { user, isUserLoading } = useUser();
 
-    const userProfileRef = useMemoFirebase(
-      () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
-      [firestore, user]
-    );
-    const { data: userProfile, isLoading: isLoadingProfile } = useDoc<{ studentId: string }>(userProfileRef);
+    const studentId = useMemo(() => {
+        if (!user?.email) return null;
+        return user.email.split('@')[0];
+    }, [user]);
   
     const complaintsQuery = useMemoFirebase(() => {
-      if (!firestore || !userProfile?.studentId) return null;
+      if (!firestore || !studentId) return null;
       return query(
         collection(firestore, 'complaints'),
-        where('studentId', '==', userProfile.studentId),
+        where('studentId', '==', studentId),
         where('status', 'in', ['Approved', 'Resolved'])
       );
-    }, [firestore, userProfile]);
+    }, [firestore, studentId]);
   
     const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsQuery);
-    const isLoading = isLoadingProfile || isLoadingComplaints;
+    const isLoading = isUserLoading || isLoadingComplaints;
   
     const sortedComplaints = useMemo(() => {
         if (!complaints) return [];
