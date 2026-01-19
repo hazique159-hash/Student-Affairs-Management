@@ -37,7 +37,7 @@ export default function MyFinesPage() {
   const studentId = useMemo(() => {
     if (!user?.email) return null;
     // Assuming student ID is the part of the email before the '@'
-    return user.email.split('@')[0];
+    return user.email.split('@')[0].toUpperCase();
   }, [user]);
 
   const fines = useMemo(() => {
