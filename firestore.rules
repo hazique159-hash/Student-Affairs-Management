@@ -158,21 +158,28 @@ service cloud.firestore {
      * @allow get - This rule is applied to every document returned by a query. It ensures that users can only see the specific complaints they are authorized to see.
      */
     match /complaints/{complaintId} {
+      // Create is allowed if the user is a teacher and is the author of the complaint.
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      
+      // Update and delete are restricted to admins.
       allow update, delete: if isAdmin();
       
       // Allow any authenticated user to *initiate* a query.
-      // The `get` rule below provides the actual security for the query's results.
+      // This is safe because the `get` rule below provides the actual security for the query's results.
       allow list: if isSignedIn();
 
-      // Enforce fine-grained access on every document read.
-      allow get: if isAdmin() || // Admins can read any complaint.
-                     (resource.data.teacherId == request.auth.uid) || // Teachers can read complaints they submitted.
-                     ( // Students can read complaints against them, but only if they exist in the users collection and the status is correct.
-                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
-                       resource.data.status in ['Approved', 'Resolved']
-                     );
+      // Enforce fine-grained access on every document read. This is applied to each document a query tries to return.
+      allow get: if 
+        // Admins can read any complaint.
+        isAdmin() || 
+        // Teachers can read complaints they submitted.
+        (resource.data.teacherId == request.auth.uid) || 
+        // Students can read complaints against them, but only if they have a user profile and the status is correct.
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == resource.data.studentId && 
+          resource.data.status in ['Approved', 'Resolved']
+        );
     }
 
     /**
