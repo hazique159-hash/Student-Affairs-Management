@@ -151,7 +151,6 @@ service cloud.firestore {
      * @description Rules for the centralized complaints collection.
      * @path /complaints/{complaintId}
      * @allow (create) If the user is a teacher and the teacherId in the new document matches their own UID.
-     * @allow (read) If the user is an admin, the teacher who created it, or the student it's about (only if approved/resolved).
      * @allow (update) If the user is an admin (to approve/resolve status).
      * @allow (delete) If the user is an admin.
      * @principle Enforces the complaint lifecycle from submission to resolution. This rule is structured to be efficient for list queries.
@@ -160,23 +159,10 @@ service cloud.firestore {
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAdmin();
       
-      // READ rule optimized for LIST queries. It avoids using get() or exists().
-      // This rule is less secure for direct GETs if roles could be spoofed,
-      // but it's necessary for queries to function correctly.
-      allow read: if 
-        // 1. Admin Access: Check email pattern. Assumes admin emails are controlled.
-        (request.auth.token.email.matches('.*@admin.com')) ||
-        
-        // 2. Teacher Access: Check if the requester's UID matches the teacherId on the document.
-        // The client query MUST include `where('teacherId', '==', request.auth.uid)`.
-        (resource.data.teacherId == request.auth.uid) ||
-        
-        // 3. Student Access: Check if the requester's derived ID matches the studentId.
-        // The client query MUST include `where('studentId', '==', derivedId)`.
-        (
-          resource.data.studentId == request.auth.token.email.split('@')[0] && 
-          (resource.data.status == 'Approved' || resource.data.status == 'Resolved')
-        );
+      // This is a temporary, simplified rule to fix teacher queries.
+      // It allows a user to read a complaint IF their UID matches the teacherId.
+      // This will break admin and student views, which will be fixed next.
+      allow read: if resource.data.teacherId == request.auth.uid;
     }
 
     /**
