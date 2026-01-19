@@ -245,11 +245,12 @@ export default function ComplaintsPage() {
         // Teachers see complaints they submitted
         return query(complaintsCollection, where('teacherId', '==', user.uid));
       case 'student':
-        // Students see complaints against them. The security rule will filter out 'Pending' ones.
+        // Students see complaints against them that are approved or resolved.
         if (!userProfile?.studentId) return null; // Wait for profile to load
         return query(
           complaintsCollection,
-          where('studentId', '==', userProfile.studentId)
+          where('studentId', '==', userProfile.studentId),
+          where('status', 'in', ['Approved', 'Resolved'])
         );
       default:
         return null;
