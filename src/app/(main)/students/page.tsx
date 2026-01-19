@@ -12,18 +12,24 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import type { Student } from '@/lib/types';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
+
   const studentsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'students') : null),
     [firestore]
   );
   const { data: students, isLoading } = useCollection<Student>(studentsRef);
+
+  const isAdmin = user?.email?.endsWith('@admin.com');
 
   return (
     <div className="space-y-8">
@@ -32,10 +38,12 @@ export default function StudentsPage() {
         icon={Users}
         description="Manage student records."
       >
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => router.push('/add-student')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
+        )}
       </PageHeader>
 
       <Card>
@@ -46,7 +54,7 @@ export default function StudentsPage() {
                 <TableHead>Student ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Department</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,9 +70,11 @@ export default function StudentsPage() {
                     <TableCell>
                       <Skeleton className="h-6 w-16" />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-8 w-16 ml-auto" />
-                    </TableCell>
+                    {isAdmin && (
+                        <TableCell className="text-right">
+                            <Skeleton className="h-8 w-16 ml-auto" />
+                        </TableCell>
+                    )}
                   </TableRow>
                 ))}
               {!isLoading &&
@@ -92,11 +102,13 @@ export default function StudentsPage() {
                         {student.department}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                    </TableCell>
+                    {isAdmin && (
+                        <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                            Edit
+                        </Button>
+                        </TableCell>
+                    )}
                   </TableRow>
                 ))}
             </TableBody>
