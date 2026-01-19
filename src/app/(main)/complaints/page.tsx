@@ -239,8 +239,11 @@ export default function ComplaintsPage() {
     
     switch (role) {
       case 'admin':
-        // Admins see all complaints. Sorting is done client-side.
-        return query(complaintsCollection);
+        // Admins see all complaints.
+        // An unconstrained collection query can fail security rules that use OR conditions.
+        // By adding a constraint, we help the query validator.
+        // We query for all possible statuses to retrieve all documents.
+        return query(complaintsCollection, where('status', 'in', ['Pending', 'Approved', 'Resolved']));
       case 'teacher':
         // Teachers see complaints they submitted
         return query(complaintsCollection, where('teacherId', '==', user.uid));
