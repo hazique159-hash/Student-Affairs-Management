@@ -226,6 +226,10 @@
           "type": "string",
           "description": "The Auth UID of the user who filed the complaint."
         },
+        "filedByName": {
+          "type": "string",
+          "description": "The name of the user who filed the complaint."
+        },
         "title": {
           "type": "string",
           "description": "Title of the complaint."
@@ -237,8 +241,9 @@
         "status": {
           "type": "string",
           "enum": [
-            "Open",
-            "In Progress",
+            "Pending",
+            "Approved",
+            "Rejected",
             "Resolved"
           ],
           "description": "Current status of the complaint."
@@ -253,6 +258,7 @@
         "studentId",
         "studentName",
         "filedById",
+        "filedByName",
         "title",
         "description",
         "status",
@@ -395,11 +401,11 @@
           "schema": {
             "$ref": "#/backend/entities/Complaint"
           },
-          "description": "Subcollection to store complaints filed by each student.",
+          "description": "Subcollection to store complaints. For filers, it's their history. For students, it's approved complaints against them.",
           "params": [
             {
               "name": "userId",
-              "description": "The user ID (student ID) of the student who filed the complaint."
+              "description": "The Auth UID of the user."
             },
             {
               "name": "complaintId",

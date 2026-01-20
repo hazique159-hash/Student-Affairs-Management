@@ -47,25 +47,33 @@ export default function MyComplaintsPage() {
   const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
 
   const isLoading = isUserLoading || isLoadingComplaints;
+  const isStudent = user?.email?.endsWith('@student.com');
+
+  const pageTitle = isStudent ? "Complaint Records" : "My Complaints";
+  const pageDescription = isStudent
+    ? "A record of all approved complaints filed against you."
+    : "A record of all complaints you have filed.";
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="My Complaints"
+        title={pageTitle}
         icon={MessageSquareHeart}
-        description="A record of all complaints you have filed."
+        description={pageDescription}
       >
-        <Button onClick={() => router.push('/register-complaint')}>
-          <Plus className="mr-2 h-4 w-4" />
-          File New Complaint
-        </Button>
+        {!isStudent && (
+          <Button onClick={() => router.push('/register-complaint')}>
+            <Plus className="mr-2 h-4 w-4" />
+            File New Complaint
+          </Button>
+        )}
       </PageHeader>
 
       <Card>
         <CardHeader>
           <CardTitle>Complaint History</CardTitle>
           <CardDescription>
-            You can view the status of your submitted complaints here.
+            You can view the status of relevant complaints here.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -73,6 +81,7 @@ export default function MyComplaintsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Date Submitted</TableHead>
+                {isStudent && <TableHead>Filed By</TableHead>}
                 <TableHead>Title</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Status</TableHead>
@@ -83,6 +92,7 @@ export default function MyComplaintsPage() {
                 Array.from({ length: 2 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    {isStudent && <TableCell><Skeleton className="h-5 w-32" /></TableCell>}
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-64" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
@@ -92,14 +102,15 @@ export default function MyComplaintsPage() {
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
                     <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
+                    {isStudent && <TableCell>{complaint.filedByName}</TableCell>}
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
                     <TableCell className="text-right">
                        <Badge
                         variant={
-                          complaint.status === 'Resolved'
+                          complaint.status === 'Rejected' || complaint.status === 'Resolved'
                             ? 'secondary'
-                            : complaint.status === 'In Progress'
+                            : complaint.status === 'Approved'
                             ? 'default'
                             : 'destructive'
                         }
@@ -112,8 +123,8 @@ export default function MyComplaintsPage() {
               ) : (
                 !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24">
-                      You have not filed any complaints.
+                    <TableCell colSpan={isStudent ? 5: 4} className="text-center h-24">
+                      {isStudent ? "No complaints have been filed against you." : "You have not filed any complaints."}
                     </TableCell>
                   </TableRow>
                 )

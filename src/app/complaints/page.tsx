@@ -21,14 +21,18 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { collection, query, orderBy, writeBatch, doc, getDocs, where } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const complaintsRef = useMemoFirebase(
     () =>
@@ -49,6 +53,55 @@ export default function ComplaintsPage() {
       router.push('/announcements');
     }
   }, [isUserLoading, user, isAdmin, isTeacher, router]);
+
+  const handleStatusUpdate = async (complaint: Complaint, newStatus: 'Approved' | 'Rejected') => {
+    if (!firestore || !isAdmin) return;
+    setUpdatingId(complaint.id);
+
+    try {
+        const batch = writeBatch(firestore);
+
+        // 1. Update the master complaint in /complaints
+        const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
+        batch.update(masterComplaintRef, { status: newStatus });
+
+        // 2. Update the filer's copy in /users/{filedById}/complaints
+        const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+        batch.update(filerComplaintRef, { status: newStatus });
+        
+        // 3. If approved, create a copy for the student
+        if (newStatus === 'Approved') {
+            const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
+            const studentUserSnapshot = await getDocs(studentUserQuery);
+            if (!studentUserSnapshot.empty) {
+                const studentUserDoc = studentUserSnapshot.docs[0];
+                const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+                batch.set(studentComplaintRef, {
+                    ...complaint,
+                    status: newStatus,
+                    dateSubmitted: complaint.dateSubmitted,
+                });
+            } else {
+                console.warn(`Could not find user account for student ID: ${complaint.studentId}. Complaint will not be visible to student.`);
+            }
+        }
+
+        await batch.commit();
+        toast({
+            title: `Complaint ${newStatus}`,
+            description: `The complaint against ${complaint.studentName} has been ${newStatus.toLowerCase()}.`
+        });
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: error.message || 'Could not update the complaint status.'
+        });
+    } finally {
+        setUpdatingId(null);
+    }
+  };
 
   if (isLoading || (!isAdmin && !isTeacher)) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
@@ -76,8 +129,9 @@ export default function ComplaintsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Student ID</TableHead>
                 <TableHead>Student Name</TableHead>
+                <TableHead>Filed By</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="text-right">Status</TableHead>
+                <TableHead className="text-right">Status / Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,8 +141,9 @@ export default function ComplaintsPage() {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-40 ml-auto" /></TableCell>
                   </TableRow>
                 ))}
               {!isLoading && complaints && complaints.length > 0 ? (
@@ -97,26 +152,38 @@ export default function ComplaintsPage() {
                     <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{complaint.studentId}</TableCell>
                     <TableCell>{complaint.studentName}</TableCell>
+                    <TableCell>{complaint.filedByName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell className="text-right">
-                       <Badge
-                        variant={
-                          complaint.status === 'Resolved'
-                            ? 'secondary'
-                            : complaint.status === 'In Progress'
-                            ? 'default'
-                            : 'destructive'
-                        }
-                      >
-                        {complaint.status}
-                      </Badge>
+                       {isAdmin && complaint.status === 'Pending' ? (
+                          <div className="flex gap-2 justify-end">
+                              <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
+                                 {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
+                                 Reject
+                              </Button>
+                          </div>
+                        ) : (
+                          <Badge
+                            variant={
+                              complaint.status === 'Rejected' || complaint.status === 'Resolved'
+                                ? 'secondary'
+                                : complaint.status === 'Approved'
+                                ? 'default'
+                                : 'destructive'
+                            }
+                          >
+                            {complaint.status}
+                          </Badge>
+                        )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={6} className="text-center h-24">
                       There are no complaints at this time.
                     </TableCell>
                   </TableRow>

@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection, writeBatch, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import type { Student, Teacher } from '@/lib/types';
 
 
 const complaintSchema = z.object({
@@ -78,6 +78,7 @@ export default function RegisterComplaintPage() {
         
         let studentRegId: string;
         let studentName: string;
+        let filedByName: string;
         const filedById = user.uid;
 
         if (isTeacher) {
@@ -92,6 +93,16 @@ export default function RegisterComplaintPage() {
                 return;
             }
             studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
+            
+            const teacherDocRef = doc(firestore, 'teachers', filedById);
+            const teacherDoc = await getDoc(teacherDocRef);
+            if (teacherDoc.exists()) {
+                const teacherData = teacherDoc.data() as Teacher;
+                filedByName = `${teacherData.firstName} ${teacherData.lastName}`;
+            } else {
+                filedByName = user.email!;
+            }
+
         } else if (isStudent) {
             studentRegId = user.email!.split('@')[0].toUpperCase();
             const studentDocRef = doc(firestore, 'students', studentRegId);
@@ -99,8 +110,10 @@ export default function RegisterComplaintPage() {
             if(studentDoc.exists()){
                 const studentData = studentDoc.data() as Student;
                 studentName = `${studentData.firstName} ${studentData.lastName}`;
+                filedByName = studentName;
             } else {
                 studentName = 'Student'; // fallback
+                filedByName = user.email!;
             }
         } else {
              toast({ variant: 'destructive', title: 'Error', description: 'You do not have permission to file a complaint.' });
@@ -108,12 +121,14 @@ export default function RegisterComplaintPage() {
         }
 
         const complaintData = {
+            id: complaintId,
             title: values.title,
             description: values.description,
             studentId: studentRegId,
             studentName: studentName,
             filedById: filedById,
-            status: 'Open' as 'Open' | 'In Progress' | 'Resolved',
+            filedByName: filedByName,
+            status: 'Pending' as const,
             dateSubmitted: serverTimestamp(),
         };
 
@@ -129,7 +144,7 @@ export default function RegisterComplaintPage() {
 
         toast({
             title: 'Complaint Submitted',
-            description: 'Your complaint has been filed and will be reviewed.',
+            description: 'Your complaint has been filed and is pending review.',
         });
         
         router.push('/my-complaints');

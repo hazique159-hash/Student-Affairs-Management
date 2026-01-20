@@ -72,7 +72,8 @@ service cloud.firestore {
 
     match /users/{userId}/complaints/{complaintId} {
         allow read: if isOwner(userId) || isTeacher() || isAdmin();
-        allow create: if isOwner(userId) || isTeacher();
+        // Admin can create a complaint in a student's subcollection upon approval
+        allow create: if isOwner(userId) || isTeacher() || isAdmin();
         allow update: if isAdmin(); // Admin can update status
     }
   }

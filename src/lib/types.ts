@@ -49,7 +49,8 @@ export type Complaint = {
   studentName: string;
   title: string;
   description: string;
-  status: 'Open' | 'In Progress' | 'Resolved';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Resolved';
   dateSubmitted: any;
   filedById: string;
+  filedByName: string;
 };
