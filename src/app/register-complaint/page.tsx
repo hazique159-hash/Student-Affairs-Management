@@ -31,9 +31,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, writeBatch, doc, query, where, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 
 
@@ -73,10 +73,13 @@ export default function RegisterComplaintPage() {
     }
 
     try {
+        const batch = writeBatch(firestore);
+        const complaintId = doc(collection(firestore, 'id_generator')).id;
+        
         let studentRegId: string;
         let studentName: string;
-        let studentAuthUid: string | null = null;
-        
+        const filedById = user.uid;
+
         if (isTeacher) {
             if (!values.studentId) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Please select a student.' });
@@ -89,17 +92,8 @@ export default function RegisterComplaintPage() {
                 return;
             }
             studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
-
-            const usersQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
-            const querySnapshot = await getDocs(usersQuery);
-            if (!querySnapshot.empty) {
-                studentAuthUid = querySnapshot.docs[0].id;
-            }
-
         } else if (isStudent) {
             studentRegId = user.email!.split('@')[0].toUpperCase();
-            studentAuthUid = user.uid;
-            
             const studentDocRef = doc(firestore, 'students', studentRegId);
             const studentDoc = await getDoc(studentDocRef);
             if(studentDoc.exists()){
@@ -108,32 +102,28 @@ export default function RegisterComplaintPage() {
             } else {
                 studentName = 'Student'; // fallback
             }
-
         } else {
              toast({ variant: 'destructive', title: 'Error', description: 'You do not have permission to file a complaint.' });
             return;
         }
-
-        const batch = writeBatch(firestore);
-        const complaintId = doc(collection(firestore, 'id_generator')).id;
 
         const complaintData = {
             title: values.title,
             description: values.description,
             studentId: studentRegId,
             studentName: studentName,
-            filedById: user.uid,
-            status: 'Open',
+            filedById: filedById,
+            status: 'Open' as 'Open' | 'In Progress' | 'Resolved',
             dateSubmitted: serverTimestamp(),
         };
 
+        // 1. Write to the global collection for admin/teacher review
         const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
         batch.set(topLevelComplaintRef, complaintData);
 
-        if (studentAuthUid) {
-            const userComplaintRef = doc(firestore, `users/${studentAuthUid}/complaints`, complaintId);
-            batch.set(userComplaintRef, complaintData);
-        }
+        // 2. Write to the filer's own subcollection for their "My Complaints" history
+        const userComplaintRef = doc(firestore, `users/${filedById}/complaints`, complaintId);
+        batch.set(userComplaintRef, complaintData);
 
         await batch.commit();
 
@@ -142,7 +132,7 @@ export default function RegisterComplaintPage() {
             description: 'Your complaint has been filed and will be reviewed.',
         });
         
-        router.push(isTeacher ? '/complaints' : '/my-complaints');
+        router.push('/my-complaints');
 
     } catch (error: any) {
         toast({
