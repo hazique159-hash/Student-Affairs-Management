@@ -4,6 +4,7 @@ export type Student = {
   firstName: string;
   lastName: string;
   department: 'CS' | 'SE' | 'BBA';
+  name: string;
   email: string;
   phone: string;
   parentEmail: string;
@@ -40,6 +41,16 @@ export type Fine = {
   dateDue: string;
   isPaid: boolean;
   reason: string;
+};
+
+export type Complaint = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  title: string;
+  description: string;
+  status: 'Open' | 'In Progress' | 'Resolved';
+  dateSubmitted: string;
 };
 
     

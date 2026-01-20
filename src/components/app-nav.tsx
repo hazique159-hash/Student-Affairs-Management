@@ -11,6 +11,10 @@ import {
   UserPlus,
   CircleDollarSign,
   Briefcase,
+  Bell,
+  MessageSquareHeart,
+  PenSquare,
+  MessageSquareWarning,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -29,31 +33,40 @@ const baseNavItems = [
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
+  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
+  { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints', roles: ['admin', 'teacher'] },
   
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
+  { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student'] },
+  { href: '/register-complaint', icon: PenSquare, label: 'File Complaint', roles: ['student'] },
 ];
 
 const adminNavOrder = [
   '/analytics',
   '/announcements',
-  '/add-teacher',
-  '/teachers',
   '/students',
-  '/counseling',
+  '/teachers',
+  '/complaints',
   '/add-student',
+  '/add-teacher',
+  '/counseling',
+  '/notifications',
   '/admin'
 ];
 
 const teacherNavOrder = [
   '/announcements',
   '/students',
-  '/teachers'
+  '/teachers',
+  '/complaints'
 ];
 
 const studentNavOrder = [
   '/announcements',
-  '/my-fines'
+  '/my-fines',
+  '/my-complaints',
+  '/register-complaint'
 ];
 
 export function AppNav() {

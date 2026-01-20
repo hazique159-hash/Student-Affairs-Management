@@ -53,6 +53,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Complaints Collection: Admins/Teachers can read all, Admins can update status.
+    match /complaints/{complaintId} {
+      allow get: if isAdmin() || isTeacher();
+      allow list: if isAdmin() || isTeacher();
+      allow create: if isSignedIn(); // Students create via subcollection
+      allow update: if isAdmin();
+    }
+
     // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
       allow read, write: if isAdmin() || isOwner(userId);
@@ -60,6 +68,11 @@ service cloud.firestore {
 
     match /users/{userId}/fines/{fineId} {
       allow read, write: if isAdmin() || isOwner(userId);
+    }
+
+    match /users/{userId}/complaints/{complaintId} {
+        allow read, create: if isOwner(userId);
+        allow update: if isAdmin(); // Admin can update status
     }
   }
 }
