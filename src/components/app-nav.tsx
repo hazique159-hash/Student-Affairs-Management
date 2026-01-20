@@ -33,11 +33,11 @@ const baseNavItems = [
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
-  { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints', roles: ['admin', 'teacher'] },
+  { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints Inbox', roles: ['admin'] },
   
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
-  { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student'] },
+  { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student', 'teacher'] },
   
   // Student & Teacher
   { href: '/register-complaint', icon: PenSquare, label: 'File Complaint', roles: ['student', 'teacher'] },
@@ -58,7 +58,7 @@ const adminNavOrder = [
 const teacherNavOrder = [
   '/announcements',
   '/students',
-  '/complaints',
+  '/my-complaints',
   '/register-complaint',
 ];
 

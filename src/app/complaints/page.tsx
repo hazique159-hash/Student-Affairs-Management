@@ -46,13 +46,12 @@ export default function ComplaintsPage() {
   const isLoading = isUserLoading || isLoadingComplaints;
 
   const isAdmin = user?.email?.endsWith('@admin.com');
-  const isTeacher = user?.email && !isAdmin && !user.email.endsWith('@student.com');
 
   useEffect(() => {
-    if (!isUserLoading && !isAdmin && !isTeacher) {
+    if (!isUserLoading && !isAdmin) {
       router.push('/announcements');
     }
-  }, [isUserLoading, user, isAdmin, isTeacher, router]);
+  }, [isUserLoading, user, isAdmin, router]);
 
   const handleStatusUpdate = async (complaint: Complaint, newStatus: 'Approved' | 'Rejected') => {
     if (!firestore || !isAdmin) return;
@@ -103,7 +102,7 @@ export default function ComplaintsPage() {
     }
   };
 
-  if (isLoading || (!isAdmin && !isTeacher)) {
+  if (isLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
 
@@ -196,5 +195,3 @@ export default function ComplaintsPage() {
     </div>
   );
 }
-
-    
