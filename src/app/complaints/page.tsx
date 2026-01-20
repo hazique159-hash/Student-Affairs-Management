@@ -155,7 +155,7 @@ export default function ComplaintsPage() {
                     <TableCell>{complaint.filedByName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell className="text-right">
-                       {isAdmin && complaint.status === 'Pending' ? (
+                       {isAdmin && (complaint.status === 'Pending' || complaint.status === 'Open') ? (
                           <div className="flex gap-2 justify-end">
                               <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
                                  {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
@@ -196,3 +196,5 @@ export default function ComplaintsPage() {
     </div>
   );
 }
+
+    
