@@ -17,19 +17,29 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useUser } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
-import { complaints as allComplaints } from '@/lib/data';
+import { useEffect } from 'react';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
-  const complaints = allComplaints;
-  const isLoading = isUserLoading;
+  const complaintsRef = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'complaints'), orderBy('dateSubmitted', 'desc'))
+        : null,
+    [firestore]
+  );
+  const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
+
+  const isLoading = isUserLoading || isLoadingComplaints;
 
   const isAdmin = user?.email?.endsWith('@admin.com');
   const isTeacher = user?.email && !isAdmin && !user.email.endsWith('@student.com');
@@ -72,7 +82,7 @@ export default function ComplaintsPage() {
             </TableHeader>
             <TableBody>
               {isLoading &&
-                Array.from({ length: 3 }).map((_, i) => (
+                Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -84,7 +94,7 @@ export default function ComplaintsPage() {
               {!isLoading && complaints && complaints.length > 0 ? (
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
-                    <TableCell>{new Date(complaint.dateSubmitted).toLocaleDateString()}</TableCell>
+                    <TableCell>{complaint.dateSubmitted ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{complaint.studentId}</TableCell>
                     <TableCell>{complaint.studentName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
@@ -119,5 +129,3 @@ export default function ComplaintsPage() {
     </div>
   );
 }
-
-    

@@ -50,5 +50,6 @@ export type Complaint = {
   title: string;
   description: string;
   status: 'Open' | 'In Progress' | 'Resolved';
-  dateSubmitted: string;
+  dateSubmitted: any;
+  filedById: string;
 };

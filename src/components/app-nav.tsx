@@ -38,7 +38,9 @@ const baseNavItems = [
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
   { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student'] },
-  { href: '/register-complaint', icon: PenSquare, label: 'File Complaint', roles: ['student'] },
+  
+  // Student & Teacher
+  { href: '/register-complaint', icon: PenSquare, label: 'File Complaint', roles: ['student', 'teacher'] },
 ];
 
 const adminNavOrder = [
@@ -57,7 +59,8 @@ const teacherNavOrder = [
   '/announcements',
   '/students',
   '/teachers',
-  '/complaints'
+  '/complaints',
+  '/register-complaint',
 ];
 
 const studentNavOrder = [

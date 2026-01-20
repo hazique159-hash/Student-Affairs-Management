@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquareHeart, Plus } from 'lucide-react';
+import { MessageSquareHeart, Plus, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -17,16 +17,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useUser } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
-import { complaints as allComplaints } from '@/lib/data';
 import { Button } from '@/components/ui/button';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 export default function MyComplaintsPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,17 +37,16 @@ export default function MyComplaintsPage() {
     }
   }, [isUserLoading, user, router]);
 
-  const studentId = useMemo(() => {
-    if (!user?.email) return null;
-    return user.email.split('@')[0].toUpperCase();
-  }, [user]);
+  const complaintsRef = useMemoFirebase(
+    () =>
+      firestore && user
+        ? query(collection(firestore, `users/${user.uid}/complaints`), orderBy('dateSubmitted', 'desc'))
+        : null,
+    [firestore, user]
+  );
+  const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
 
-  const complaints = useMemo(() => {
-    if (!studentId) return [];
-    return allComplaints.filter(c => c.studentId === studentId);
-  }, [studentId]);
-
-  const isLoading = isUserLoading;
+  const isLoading = isUserLoading || isLoadingComplaints;
 
   return (
     <div className="space-y-8">
@@ -90,7 +91,7 @@ export default function MyComplaintsPage() {
               {!isLoading && complaints && complaints.length > 0 ? (
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
-                    <TableCell>{new Date(complaint.dateSubmitted).toLocaleDateString()}</TableCell>
+                    <TableCell>{complaint.dateSubmitted ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
                     <TableCell className="text-right">
@@ -124,5 +125,3 @@ export default function MyComplaintsPage() {
     </div>
   );
 }
-
-    

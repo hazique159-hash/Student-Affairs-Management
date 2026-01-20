@@ -23,13 +23,24 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { collection, writeBatch, doc, query, where, getDocs, serverTimestamp, getDoc } from 'firebase/firestore';
+import type { Student } from '@/lib/types';
+
 
 const complaintSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
+  studentId: z.string().optional(),
 });
 
 export default function RegisterComplaintPage() {
@@ -37,40 +48,109 @@ export default function RegisterComplaintPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const isTeacher = user?.email && !user.email.endsWith('@student.com') && !user.email.endsWith('@admin.com');
+  const isStudent = user?.email?.endsWith('@student.com');
+
+  const studentsRef = useMemoFirebase(() => (firestore && isTeacher ? collection(firestore, 'students') : null), [firestore, isTeacher]);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
+
   const form = useForm<z.infer<typeof complaintSchema>>({
-    resolver: zodResolver(complaintSchema),
+    resolver: zodResolver(complaintSchema.refine(data => !isTeacher || (isTeacher && data.studentId), {
+      message: "Please select a student.",
+      path: ["studentId"],
+    })),
     defaultValues: {
       title: '',
       description: '',
+      studentId: undefined,
     },
   });
 
   const onSubmit = async (values: z.infer<typeof complaintSchema>) => {
     if (!firestore || !user) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'You must be logged in to file a complaint.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to file a complaint.' });
       return;
     }
 
-    // In a real app, you'd save this to Firestore.
-    // For now, we'll just show a success message.
-    console.log({
-        ...values,
-        studentId: user.email?.split('@')[0],
-        userId: user.uid,
-        status: 'Open',
-        dateSubmitted: new Date().toISOString()
-    });
+    try {
+        let studentRegId: string;
+        let studentName: string;
+        let studentAuthUid: string | null = null;
+        
+        if (isTeacher) {
+            if (!values.studentId) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Please select a student.' });
+                return;
+            }
+            studentRegId = values.studentId;
+            const selectedStudent = students?.find(s => s.id === studentRegId);
+            if (!selectedStudent) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Selected student not found.' });
+                return;
+            }
+            studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
 
-    toast({
-      title: 'Complaint Submitted',
-      description: 'Your complaint has been filed. You can track its status on the "My Complaints" page.',
-    });
-    
-    router.push('/my-complaints');
+            const usersQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
+            const querySnapshot = await getDocs(usersQuery);
+            if (!querySnapshot.empty) {
+                studentAuthUid = querySnapshot.docs[0].id;
+            }
+
+        } else if (isStudent) {
+            studentRegId = user.email!.split('@')[0].toUpperCase();
+            studentAuthUid = user.uid;
+            
+            const studentDocRef = doc(firestore, 'students', studentRegId);
+            const studentDoc = await getDoc(studentDocRef);
+            if(studentDoc.exists()){
+                const studentData = studentDoc.data() as Student;
+                studentName = `${studentData.firstName} ${studentData.lastName}`;
+            } else {
+                studentName = 'Student'; // fallback
+            }
+
+        } else {
+             toast({ variant: 'destructive', title: 'Error', description: 'You do not have permission to file a complaint.' });
+            return;
+        }
+
+        const batch = writeBatch(firestore);
+        const complaintId = doc(collection(firestore, 'id_generator')).id;
+
+        const complaintData = {
+            title: values.title,
+            description: values.description,
+            studentId: studentRegId,
+            studentName: studentName,
+            filedById: user.uid,
+            status: 'Open',
+            dateSubmitted: serverTimestamp(),
+        };
+
+        const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
+        batch.set(topLevelComplaintRef, complaintData);
+
+        if (studentAuthUid) {
+            const userComplaintRef = doc(firestore, `users/${studentAuthUid}/complaints`, complaintId);
+            batch.set(userComplaintRef, complaintData);
+        }
+
+        await batch.commit();
+
+        toast({
+            title: 'Complaint Submitted',
+            description: 'Your complaint has been filed and will be reviewed.',
+        });
+        
+        router.push(isTeacher ? '/complaints' : '/my-complaints');
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: error.message || 'An unexpected error occurred.',
+        });
+    }
   };
 
   return (
@@ -91,6 +171,32 @@ export default function RegisterComplaintPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
+                {isTeacher && (
+                    <FormField
+                    control={form.control}
+                    name="studentId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Student</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger disabled={isLoadingStudents}>
+                                <SelectValue placeholder={isLoadingStudents ? "Loading students..." : "Select a student"} />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {students?.map(student => (
+                                    <SelectItem key={student.id} value={student.id}>
+                                        {student.firstName} {student.lastName} ({student.id})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
               <FormField
                 control={form.control}
                 name="title"
@@ -134,5 +240,3 @@ export default function RegisterComplaintPage() {
     </div>
   );
 }
-
-    
