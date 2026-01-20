@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Plus } from 'lucide-react';
+import { Briefcase, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -16,19 +16,38 @@ import type { Teacher } from '@/lib/types';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TeachersPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   const teachersRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'teachers') : null),
-    [firestore]
+    () => (firestore && user?.email?.endsWith('@admin.com') ? collection(firestore, 'teachers') : null),
+    [firestore, user]
   );
-  const { data: teachers, isLoading } = useCollection<Teacher>(teachersRef);
-
+  const { data: teachers, isLoading: isLoadingTeachers } = useCollection<Teacher>(teachersRef);
+  
+  const isLoading = isUserLoading || isLoadingTeachers;
   const isAdmin = user?.email?.endsWith('@admin.com');
+
+  useEffect(() => {
+    if (!isUserLoading && !isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Access Denied',
+        description: 'You do not have permission to view this page.',
+      });
+      router.push('/announcements');
+    }
+  }, [isAdmin, isUserLoading, router, toast]);
+
+  if (isUserLoading || !isAdmin) {
+    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-8">

@@ -29,7 +29,7 @@ const baseNavItems = [
   { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
   { href: '/announcements', icon: Megaphone, label: 'Announcements', roles: ['admin', 'teacher', 'student'] },
   { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
-  { href: '/teachers', icon: Briefcase, label: 'Teacher Records', roles: ['admin', 'teacher'] },
+  { href: '/teachers', icon: Briefcase, label: 'Teacher Records', roles: ['admin'] },
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
@@ -58,7 +58,6 @@ const adminNavOrder = [
 const teacherNavOrder = [
   '/announcements',
   '/students',
-  '/teachers',
   '/complaints',
   '/register-complaint',
 ];

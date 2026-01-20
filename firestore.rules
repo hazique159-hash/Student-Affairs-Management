@@ -30,7 +30,7 @@ service cloud.firestore {
     match /teachers/{teacherId} {
       allow create: if isAdmin();
       allow get: if isOwner(teacherId) || isAdmin();
-      allow list: if isAdmin() || isTeacher();
+      allow list: if isAdmin();
       allow update, delete: if isAdmin();
     }
     
