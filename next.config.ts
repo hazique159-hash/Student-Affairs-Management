@@ -2,6 +2,15 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async redirects() {
+    return [
+      {
+        source: '/:path((main/complaints))',
+        destination: '/complaints',
+        permanent: false,
+      },
+    ]
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
