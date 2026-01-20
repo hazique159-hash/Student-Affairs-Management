@@ -1,6 +1,7 @@
 'use client';
 
-import { Megaphone, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Megaphone, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PageHeader } from '@/components/page-header';
 import {
   Sheet,
   SheetContent,
@@ -17,21 +17,49 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetFooter,
+  SheetClose,
 } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import type { Announcement } from '@/lib/types';
-import { useState } from 'react';
-import { useUser } from '@/firebase/provider';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import {
+  useCollection,
+  useFirestore,
+  useMemoFirebase,
+  useUser,
+} from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { PageHeader } from '@/components/page-header';
+import type { Announcement } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+
+// Form schema for creating an announcement
+const announcementSchema = z.object({
+  title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
+  content: z
+    .string()
+    .min(20, { message: 'Content must be at least 20 characters.' }),
+});
 
 export default function AnnouncementsPage() {
-  const firestore = useFirestore();
   const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
   const announcementsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'announcements') : null),
     [firestore]
@@ -39,50 +67,45 @@ export default function AnnouncementsPage() {
   const { data: announcements, isLoading } =
     useCollection<Announcement>(announcementsRef);
 
-  const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
-  const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const isAdmin = user?.email?.endsWith('@admin.com');
 
-  const handlePublish = async () => {
-    if (!announcementsRef || !newAnnouncementTitle || !newAnnouncementContent) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Fields',
-            description: 'Please provide both a title and content for the announcement.'
-        });
-        return;
-    }
+  const form = useForm<z.infer<typeof announcementSchema>>({
+    resolver: zodResolver(announcementSchema),
+    defaultValues: {
+      title: '',
+      content: '',
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof announcementSchema>) => {
+    if (!firestore || !announcementsRef) return;
+
     try {
-        await addDoc(announcementsRef, {
-            title: newAnnouncementTitle,
-            content: newAnnouncementContent,
-            datePublished: new Date().toISOString(),
-        });
-        toast({
-            title: 'Announcement Published',
-            description: 'The new announcement is now live for all users.'
-        })
-        setNewAnnouncementTitle('');
-        setNewAnnouncementContent('');
-        setIsSheetOpen(false);
-    } catch(e: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Publishing Failed',
-            description: e.message || 'There was an error publishing the announcement.'
-        })
+      await addDoc(announcementsRef, {
+        ...values,
+        datePublished: serverTimestamp(),
+      });
+      toast({
+        title: 'Announcement Published',
+        description: 'The announcement is now live for all users.',
+      });
+      form.reset();
+      setIsSheetOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Publish',
+        description: error.message || 'An unexpected error occurred.',
+      });
     }
   };
-
-  // A simple way to check for admin without full RBAC for now
-  const isAdmin = user?.email?.includes('admin');
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Announcements"
         icon={Megaphone}
-        description="Publish and view announcements for all students."
+        description="Stay updated with the latest news and announcements from the institution."
       >
         {isAdmin && (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -93,86 +116,124 @@ export default function AnnouncementsPage() {
               </Button>
             </SheetTrigger>
             <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Create New Announcement</SheetTitle>
-                <SheetDescription>
-                  Fill out the form below to publish a new announcement to all
-                  students.
-                </SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="title" className="text-right">
-                    Title
-                  </Label>
-                  <Input
-                    id="title"
-                    placeholder="e.g., Exam Schedule Update"
-                    className="col-span-3"
-                    value={newAnnouncementTitle}
-                    onChange={(e) => setNewAnnouncementTitle(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="content" className="text-right pt-2">
-                    Content
-                  </Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Enter announcement details..."
-                    className="col-span-3 min-h-[120px]"
-                    value={newAnnouncementContent}
-                    onChange={(e) => setNewAnnouncementContent(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" onClick={handlePublish}>
-                  Publish
-                </Button>
-              </div>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="flex flex-col h-full"
+                >
+                  <SheetHeader>
+                    <SheetTitle>Create New Announcement</SheetTitle>
+                    <SheetDescription>
+                      This announcement will be visible to all students and
+                      teachers.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="py-6 space-y-6 flex-1 overflow-y-auto">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g., Campus Holiday Notification"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="content"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Content</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Provide the full details of the announcement here..."
+                              className="min-h-[200px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <SheetFooter>
+                    <SheetClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </SheetClose>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Publish
+                    </Button>
+                  </SheetFooter>
+                </form>
+              </Form>
             </SheetContent>
           </Sheet>
         )}
       </PageHeader>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-6">
         {isLoading &&
           Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
               <CardHeader>
-                <CardTitle className="h-6 w-3/4 bg-muted animate-pulse rounded-md" />
-                <CardDescription className="h-4 w-1/2 bg-muted animate-pulse rounded-md" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/4 mt-2" />
               </CardHeader>
               <CardContent>
-                <p className="h-16 bg-muted animate-pulse rounded-md" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full mt-2" />
+                <Skeleton className="h-4 w-2/3 mt-2" />
               </CardContent>
             </Card>
           ))}
-        {announcements?.sort((a,b) => new Date(b.datePublished).getTime() - new Date(a.datePublished).getTime()).map((announcement) => (
-          <Card
-            key={announcement.id}
-            className="flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-          >
-            <CardHeader>
-              <CardTitle className="font-headline">
-                {announcement.title}
-              </CardTitle>
-              <CardDescription>
-                {new Date(announcement.datePublished).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-sm text-muted-foreground">
-                {announcement.content}
+
+        {!isLoading && announcements && announcements.length > 0 ? (
+          announcements
+            .sort(
+              (a, b) =>
+                (b.datePublished as any)?.seconds -
+                (a.datePublished as any)?.seconds
+            )
+            .map((announcement) => (
+              <Card key={announcement.id}>
+                <CardHeader>
+                  <CardTitle>{announcement.title}</CardTitle>
+                  <CardDescription>
+                    Published on{' '}
+                    {announcement.datePublished
+                      ? format(
+                          new Date(
+                            (announcement.datePublished as any).seconds * 1000
+                          ),
+                          'PPP'
+                        )
+                      : '...'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap">{announcement.content}</p>
+                </CardContent>
+              </Card>
+            ))
+        ) : (
+          !isLoading && (
+            <Card className="flex items-center justify-center h-48">
+              <p className="text-muted-foreground">
+                There are no announcements at this time.
               </p>
-            </CardContent>
-          </Card>
-        ))}
+            </Card>
+          )
+        )}
       </div>
     </div>
   );

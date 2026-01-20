@@ -15,7 +15,7 @@ export type Announcement = {
   id: string;
   title: string;
   content: string;
-  datePublished: string;
+  datePublished: any;
 };
 
 export type CounselingSession = {
@@ -52,5 +52,3 @@ export type Complaint = {
   status: 'Open' | 'In Progress' | 'Resolved';
   dateSubmitted: string;
 };
-
-    
