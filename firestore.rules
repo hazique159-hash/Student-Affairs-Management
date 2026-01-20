@@ -21,18 +21,6 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
-    function isStudent() {
-        // A user is a student if they are not an admin or a teacher.
-        // This relies on the fact that all users are one of the three roles.
-        return isSignedIn() && !isAdmin() && !isTeacher();
-    }
-    
-    // Get the student document ID associated with the current user's auth UID
-    function getStudentId() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId;
-    }
-
-
     // Admin Roles: Only admins can manage the admin role list.
     match /roles_admin/{adminId} {
       allow read, write: if isAdmin();
@@ -64,26 +52,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
-
-    // Complaints Collection: Complex role-based access.
-    match /complaints/{complaintId} {
-      // Create: Only teachers can create complaints, and they must be the author.
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      
-      // Read:
-      // 1. Admins can read all complaints.
-      // 2. Teachers can only read complaints they have submitted.
-      // 3. Students can only read complaints against them if status is 'Approved' or 'Resolved'.
-      allow read: if isAdmin() ||
-                   (isTeacher() && resource.data.teacherId == request.auth.uid) ||
-                   (isStudent() && resource.data.studentId == getStudentId() && (resource.data.status == 'Approved' || resource.data.status == 'Resolved'));
-                   
-      // Update: Only admins can update complaints (e.g., change status).
-      allow update: if isAdmin();
-      
-      // Delete: Only admins can delete complaints.
-      allow delete: if isAdmin();
-    }
     
     // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
@@ -95,3 +63,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

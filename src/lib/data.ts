@@ -1,4 +1,4 @@
-import type { Student, Announcement, CounselingSession, Teacher, Fine } from './types';
+import type { Student, CounselingSession, Fine } from './types';
 
 export const students: Student[] = [
   { id: 'BCS223089', firstName: 'Muhammad', lastName: 'Hazique', department: 'CS', email: 'hazique@example.com', phone: '123-456-7890', parentEmail: 'parent.hazique@example.com', parentPhone: '098-765-4321' },
@@ -8,10 +8,6 @@ export const students: Student[] = [
   { id: 'SE-005', firstName: 'Jane', lastName: 'Smith', department: 'SE', email: 'jane@example.com', phone: '123-456-7890', parentEmail: 'parent.jane@example.com', parentPhone: '098-765-4321' },
   { id: 'BBA-006', firstName: 'Peter', lastName: 'Jones', department: 'BBA', email: 'peter@example.com', phone: '123-456-7890', parentEmail: 'parent.peter@example.com', parentPhone: '098-765-4321' },
   { id: 'BCS223000', firstName: 'Dummy', lastName: 'Student', department: 'SE', email: 'dummy@example.com', phone: '111-222-3333', parentEmail: 'parent.dummy@example.com', parentPhone: '444-555-6666' },
-];
-
-export const announcements: Announcement[] = [
-     // This data is now fetched from Firestore
 ];
 
 export const counselingSessions: CounselingSession[] = [
@@ -30,3 +26,5 @@ export const fines: Fine[] = [
   { id: 'F002', studentId: 'BCS223089', amount: 200, dateIssued: new Date(2024, 4, 20).toISOString(), dateDue: new Date(2024, 5, 20).toISOString(), isPaid: true, reason: 'Library book overdue' },
   { id: 'F003', studentId: 'BCS223000', amount: 1000, dateIssued: new Date(2024, 6, 1).toISOString(), dateDue: new Date(2024, 7, 1).toISOString(), isPaid: false, reason: 'Vandalism in common room' },
 ];
+
+    

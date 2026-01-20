@@ -13,10 +13,8 @@ export default function RootPage() {
         const email = user.email || '';
         if (email.endsWith('@admin.com')) {
           redirect('/analytics');
-        } else if (email.endsWith('@student.com')) {
-          redirect('/announcements');
         } else {
-          redirect('/complaints');
+          redirect('/announcements');
         }
       } else {
         redirect('/login');
@@ -30,3 +28,5 @@ export default function RootPage() {
     </div>
   );
 }
+
+    

@@ -6,13 +6,11 @@ import {
   BarChart2,
   HeartHandshake,
   Megaphone,
-  MessageSquarePlus,
   Shield,
   Users,
   UserPlus,
   CircleDollarSign,
   Briefcase,
-  Gavel,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -32,11 +30,6 @@ const baseNavItems = [
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   
-  // Teacher
-  { href: '/complaints', icon: Gavel, label: 'Complaints', roles: ['admin', 'teacher', 'student']},
-  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
-
-
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
 ];
@@ -44,7 +37,6 @@ const baseNavItems = [
 const adminNavOrder = [
   '/analytics',
   '/announcements',
-  '/complaints',
   '/add-teacher',
   '/teachers',
   '/students',
@@ -54,8 +46,6 @@ const adminNavOrder = [
 ];
 
 const teacherNavOrder = [
-  '/complaints',
-  '/register-complaint',
   '/announcements',
   '/students',
   '/teachers'
@@ -63,7 +53,6 @@ const teacherNavOrder = [
 
 const studentNavOrder = [
   '/announcements',
-  '/complaints',
   '/my-fines'
 ];
 
@@ -116,3 +105,5 @@ export function AppNav() {
     </SidebarMenu>
   );
 }
+
+    

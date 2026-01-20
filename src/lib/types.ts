@@ -14,7 +14,7 @@ export type Announcement = {
   id: string;
   title: string;
   content: string;
-  date: string;
+  datePublished: string;
 };
 
 export type CounselingSession = {
@@ -41,3 +41,5 @@ export type Fine = {
   isPaid: boolean;
   reason: string;
 };
+
+    

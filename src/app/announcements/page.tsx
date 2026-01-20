@@ -22,15 +22,16 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, addDoc } from 'firebase/firestore';
 import type { Announcement } from '@/lib/types';
 import { useState } from 'react';
 import { useUser } from '@/firebase/provider';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AnnouncementsPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
   const announcementsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'announcements') : null),
     [firestore]
@@ -40,16 +41,37 @@ export default function AnnouncementsPage() {
 
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const handlePublish = () => {
-    if (!announcementsRef) return;
-    addDocumentNonBlocking(announcementsRef, {
-      title: newAnnouncementTitle,
-      content: newAnnouncementContent,
-      date: new Date().toISOString(),
-    });
-    setNewAnnouncementTitle('');
-    setNewAnnouncementContent('');
+  const handlePublish = async () => {
+    if (!announcementsRef || !newAnnouncementTitle || !newAnnouncementContent) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Fields',
+            description: 'Please provide both a title and content for the announcement.'
+        });
+        return;
+    }
+    try {
+        await addDoc(announcementsRef, {
+            title: newAnnouncementTitle,
+            content: newAnnouncementContent,
+            datePublished: new Date().toISOString(),
+        });
+        toast({
+            title: 'Announcement Published',
+            description: 'The new announcement is now live for all users.'
+        })
+        setNewAnnouncementTitle('');
+        setNewAnnouncementContent('');
+        setIsSheetOpen(false);
+    } catch(e: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Publishing Failed',
+            description: e.message || 'There was an error publishing the announcement.'
+        })
+    }
   };
 
   // A simple way to check for admin without full RBAC for now
@@ -63,7 +85,7 @@ export default function AnnouncementsPage() {
         description="Publish and view announcements for all students."
       >
         {isAdmin && (
-          <Sheet>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -127,7 +149,7 @@ export default function AnnouncementsPage() {
               </CardContent>
             </Card>
           ))}
-        {announcements?.map((announcement) => (
+        {announcements?.sort((a,b) => new Date(b.datePublished).getTime() - new Date(a.datePublished).getTime()).map((announcement) => (
           <Card
             key={announcement.id}
             className="flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
@@ -137,7 +159,7 @@ export default function AnnouncementsPage() {
                 {announcement.title}
               </CardTitle>
               <CardDescription>
-                {new Date(announcement.date).toLocaleDateString('en-US', {
+                {new Date(announcement.datePublished).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -155,3 +177,5 @@ export default function AnnouncementsPage() {
     </div>
   );
 }
+
+    

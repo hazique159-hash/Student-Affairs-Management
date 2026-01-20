@@ -192,3 +192,5 @@ export default function AddTeacherPage() {
     </div>
   );
 }
+
+    

@@ -91,24 +91,27 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, emailToLogin, values.password);
 
       const isAdmin = emailToLogin.endsWith('@admin.com');
-      const isStudent = emailToLogin.endsWith('@student.com');
 
-      let role = 'Teacher';
-      if (isAdmin) role = 'Admin';
-      if (isStudent) role = 'Student';
+      let role = 'User';
+       if (isAdmin) {
+        role = 'Admin';
+      } else if (emailToLogin.endsWith('@student.com')) {
+        role = 'Student';
+      } else {
+        role = 'Teacher';
+      }
 
       toast({
         title: 'Login Successful',
         description: `Welcome back, ${role}!`,
       });
-
+      
       if (isAdmin) {
         router.push('/analytics');
-      } else if (isStudent) {
-        router.push('/announcements');
       } else {
-        router.push('/complaints');
+        router.push('/announcements');
       }
+
     } catch (error: any) {
       console.error(error);
       toast({
@@ -200,3 +203,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

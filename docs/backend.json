@@ -203,61 +203,6 @@
         "username",
         "email"
       ]
-    },
-     "Complaint": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Complaint",
-      "type": "object",
-      "description": "Represents a complaint filed against a student by a teacher.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Complaint entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "The ID of the student against whom the complaint is filed."
-        },
-        "studentName": {
-            "type": "string",
-            "description": "The name of the student against whom the complaint is filed."
-        },
-        "teacherId": {
-          "type": "string",
-          "description": "The ID of the teacher who filed the complaint."
-        },
-        "teacherName": {
-            "type": "string",
-            "description": "The name of the teacher who filed the complaint."
-        },
-        "violationType": {
-          "type": "string",
-          "description": "The type of violation (e.g., 'Academic Misconduct', 'Disciplinary Issue')."
-        },
-        "details": {
-          "type": "string",
-          "description": "Detailed description of the complaint."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["Pending", "Approved", "Resolved"],
-          "description": "The current status of the complaint."
-        },
-        "dateSubmitted": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time the complaint was submitted."
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "teacherId",
-        "violationType",
-        "details",
-        "status",
-        "dateSubmitted"
-      ]
     }
   },
   "auth": {
@@ -371,24 +316,10 @@
             }
           ]
         }
-      },
-       {
-        "path": "/complaints/{complaintId}",
-        "definition": {
-          "entityName": "Complaint",
-          "schema": {
-            "$ref": "#/backend/entities/Complaint"
-          },
-          "description": "Collection to store all complaints filed by teachers against students.",
-          "params": [
-            {
-              "name": "complaintId",
-              "description": "The unique ID of the complaint."
-            }
-          ]
-        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability. It leverages denormalization and structural segregation to simplify security rules and enable atomic operations. The design incorporates explicit state modeling and consistent naming conventions for improved debuggability and maintainability.\n\n**Authorization Independence:** Authorization is enforced without relying on hierarchical `get()` calls, which could compromise atomic operations. For collaborative data, a membership map (`members`) is used. For user-owned data, the path-based ownership is applied. \n\n**QAPs Support:** The structure supports secure `list` operations (QAPs) by segregating data based on access requirements and using dedicated collections for global roles. Segregation of `announcements` enables public list access while private student data is secured by user-specific paths.\n\nThe structure includes collections for `admins`, `teachers`, `students`, `announcements`, `counselingSessions`, and `fines`. Admin roles are managed through a dedicated `/roles_admin/{uid}` collection, using existence checks in security rules. Teacher roles are managed through a dedicated `/teachers/{teacherId}` collection, again using existence checks. Complaints are stored in a single root `/complaints` collection, with security rules ensuring that teachers can only create and view their own submissions, admins can manage all complaints, and students can only view complaints filed against them once they are in an 'Approved' or 'Resolved' state. Student-specific data, such as counseling sessions and fines, are stored under `/users/{userId}/counselingSessions/{counselingSessionId}` and `/users/{userId}/fines/{fineId}`, respectively, to ensure proper data ownership and authorization."
+    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability. It leverages denormalization and structural segregation to simplify security rules and enable atomic operations. The design incorporates explicit state modeling and consistent naming conventions for improved debuggability and maintainability.\n\n**Authorization Independence:** Authorization is enforced without relying on hierarchical `get()` calls, which could compromise atomic operations. For collaborative data, a membership map (`members`) is used. For user-owned data, the path-based ownership is applied. \n\n**QAPs Support:** The structure supports secure `list` operations (QAPs) by segregating data based on access requirements and using dedicated collections for global roles. Segregation of `announcements` enables public list access while private student data is secured by user-specific paths.\n\nThe structure includes collections for `admins`, `teachers`, `students`, `announcements`, `counselingSessions`, and `fines`. Admin roles are managed through a dedicated `/roles_admin/{uid}` collection, using existence checks in security rules. Teacher roles are managed through a dedicated `/teachers/{teacherId}` collection, again using existence checks. Student-specific data, such as counseling sessions and fines, are stored under `/users/{userId}/counselingSessions/{counselingSessionId}` and `/users/{userId}/fines/{fineId}`, respectively, to ensure proper data ownership and authorization."
   }
 }
+
+    
