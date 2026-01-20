@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquareWarning, Loader2 } from 'lucide-react';
+import { MessageSquareWarning, Loader2, Trash2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -26,6 +26,17 @@ import { collection, query, orderBy, writeBatch, doc, getDocs, where } from 'fir
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
@@ -33,6 +44,7 @@ export default function ComplaintsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const complaintsRef = useMemoFirebase(
     () =>
@@ -60,15 +72,12 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Update the master complaint in /complaints
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // 2. Update the filer's copy in /users/{filedById}/complaints
         const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
         batch.update(filerComplaintRef, { status: newStatus });
         
-        // 3. If approved, create a copy for the student
         if (newStatus === 'Approved') {
             const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
             const studentUserSnapshot = await getDocs(studentUserQuery);
@@ -101,6 +110,45 @@ export default function ComplaintsPage() {
         setUpdatingId(null);
     }
   };
+
+  const handleDelete = async (complaint: Complaint) => {
+    if (!firestore || !isAdmin) return;
+    setDeletingId(complaint.id);
+
+    try {
+      const batch = writeBatch(firestore);
+
+      const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
+      batch.delete(masterComplaintRef);
+
+      const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+      batch.delete(filerComplaintRef);
+
+      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
+      const studentUserSnapshot = await getDocs(studentUserQuery);
+      if (!studentUserSnapshot.empty) {
+          const studentUserDoc = studentUserSnapshot.docs[0];
+          const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+          batch.delete(studentComplaintRef);
+      }
+
+      await batch.commit();
+      toast({
+          title: 'Complaint Deleted',
+          description: `The complaint against ${complaint.studentName} has been permanently deleted.`
+      });
+
+    } catch (error: any) {
+      toast({
+          variant: 'destructive',
+          title: 'Delete Failed',
+          description: error.message || 'Could not delete the complaint.'
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
 
   if (isLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
@@ -154,28 +202,55 @@ export default function ComplaintsPage() {
                     <TableCell>{complaint.filedByName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell className="text-right">
-                       {isAdmin && (complaint.status === 'Pending' || complaint.status === 'Open') ? (
-                          <div className="flex gap-2 justify-end">
-                              <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
-                                 {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
-                                 Reject
-                              </Button>
-                          </div>
-                        ) : (
-                          <Badge
-                            variant={
-                              complaint.status === 'Rejected' || complaint.status === 'Resolved'
-                                ? 'secondary'
-                                : complaint.status === 'Approved'
-                                ? 'default'
-                                : 'destructive'
-                            }
-                          >
-                            {complaint.status}
-                          </Badge>
-                        )}
+                       <div className="flex items-center justify-end gap-2">
+                        {(complaint.status === 'Pending' || complaint.status === 'Open') && isAdmin ? (
+                            <>
+                                <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
+                                   {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
+                                   Reject
+                                </Button>
+                            </>
+                          ) : (
+                            <Badge
+                              variant={
+                                complaint.status === 'Rejected' || complaint.status === 'Resolved'
+                                  ? 'secondary'
+                                  : complaint.status === 'Approved'
+                                  ? 'default'
+                                  : 'destructive'
+                              }
+                            >
+                              {complaint.status}
+                            </Badge>
+                          )}
+                          
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the complaint regarding "{complaint.title}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(complaint)} disabled={deletingId === complaint.id}>
+                                    {deletingId === complaint.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Delete Complaint
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                       </div>
                     </TableCell>
                   </TableRow>
                 ))
