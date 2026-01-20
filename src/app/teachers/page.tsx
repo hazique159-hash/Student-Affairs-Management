@@ -13,17 +13,29 @@ import {
 } from '@/components/ui/table';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import type { Teacher } from '@/lib/types';
-import { collection } from 'firebase/firestore';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function TeachersPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const teachersRef = useMemoFirebase(
     () => (firestore && user?.email?.endsWith('@admin.com') ? collection(firestore, 'teachers') : null),
@@ -44,6 +56,30 @@ export default function TeachersPage() {
       router.push('/announcements');
     }
   }, [isAdmin, isUserLoading, router, toast]);
+
+  const handleDelete = async (teacher: Teacher) => {
+    if (!firestore || !isAdmin) return;
+    setIsDeleting(teacher.id);
+
+    try {
+      await deleteDoc(doc(firestore, 'teachers', teacher.id));
+      // Note: This only deletes the Firestore record. The Firebase Auth user
+      // is not deleted as it requires a privileged server environment.
+      toast({
+        title: 'Teacher Deleted',
+        description: `The record for ${teacher.firstName} ${teacher.lastName} has been deleted.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete teacher record.',
+      });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
 
   if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
@@ -86,7 +122,7 @@ export default function TeachersPage() {
                     </TableCell>
                     {isAdmin && (
                         <TableCell className="text-right">
-                            <Skeleton className="h-8 w-16 ml-auto" />
+                            <Skeleton className="h-8 w-32 ml-auto" />
                         </TableCell>
                     )}
                   </TableRow>
@@ -97,10 +133,32 @@ export default function TeachersPage() {
                     <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
                     <TableCell>{teacher.email}</TableCell>
                     {isAdmin && (
-                        <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <TableCell className="text-right space-x-2">
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
                             Edit
-                        </Button>
+                          </Button>
+                          <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                      Delete
+                                  </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          This action cannot be undone. This will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}. The teacher's login account will not be deleted.
+                                      </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDelete(teacher)} disabled={isDeleting === teacher.id}>
+                                        {isDeleting === teacher.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                        Continue
+                                      </AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                     )}
                   </TableRow>
