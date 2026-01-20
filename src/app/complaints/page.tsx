@@ -94,7 +94,7 @@ export default function ComplaintsPage() {
               {!isLoading && complaints && complaints.length > 0 ? (
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
-                    <TableCell>{complaint.dateSubmitted ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>{complaint.studentId}</TableCell>
                     <TableCell>{complaint.studentName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
