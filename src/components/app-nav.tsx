@@ -8,11 +8,11 @@ import {
   Megaphone,
   MessageSquarePlus,
   Shield,
-  ShieldQuestion,
   Users,
   UserPlus,
   CircleDollarSign,
   Briefcase,
+  Gavel,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -33,6 +33,9 @@ const baseNavItems = [
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   
   // Teacher
+  { href: '/complaints', icon: Gavel, label: 'Complaints', roles: ['admin', 'teacher', 'student']},
+  { href: '/register-complaint', icon: MessageSquarePlus, label: 'Register Complaint', roles: ['teacher'] },
+
 
   // Student
   { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
@@ -41,12 +44,27 @@ const baseNavItems = [
 const adminNavOrder = [
   '/analytics',
   '/announcements',
+  '/complaints',
   '/add-teacher',
   '/teachers',
   '/students',
   '/counseling',
   '/add-student',
   '/admin'
+];
+
+const teacherNavOrder = [
+  '/complaints',
+  '/register-complaint',
+  '/announcements',
+  '/students',
+  '/teachers'
+];
+
+const studentNavOrder = [
+  '/announcements',
+  '/complaints',
+  '/my-fines'
 ];
 
 export function AppNav() {
@@ -70,10 +88,13 @@ export function AppNav() {
 
   let navItems = baseNavItems.filter(item => item.roles.includes(userRole));
 
+  // Sort items based on role-specific order
   if (userRole === 'admin') {
-    const adminItems = adminNavOrder.map(href => navItems.find(item => item.href === href)).filter(Boolean);
-    const otherAdminItems = navItems.filter(item => !adminNavOrder.includes(item.href) && item.roles.includes('admin'));
-    navItems = [...(adminItems as any), ...otherAdminItems];
+    navItems.sort((a, b) => adminNavOrder.indexOf(a.href) - adminNavOrder.indexOf(b.href));
+  } else if (userRole === 'teacher') {
+    navItems.sort((a, b) => teacherNavOrder.indexOf(a.href) - teacherNavOrder.indexOf(b.href));
+  } else if (userRole === 'student') {
+    navItems.sort((a, b) => studentNavOrder.indexOf(a.href) - studentNavOrder.indexOf(b.href));
   }
 
 

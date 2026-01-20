@@ -1,138 +1,97 @@
 
-/**
- * @fileoverview Firestore Security Rules for the Student Management System.
- *
- * Core Philosophy:
- * This ruleset employs a hybrid security model, blending role-based access control (RBAC) for admins and teachers with strict ownership-based access control for student-related data.
- * Admin privileges are granted by the existence of a document in the `/roles_admin/{adminId}` collection, enabling them to manage all data.
- * Teacher privileges are granted by the existence of a document in the `/teachers/{teacherId}` collection, enabling them to create complaints and view student data.
- * Student data (counseling sessions, fines) is strictly controlled by user-specific paths, ensuring that only the authenticated user can access their own data.
- * Public announcements are readable by anyone but can only be created/modified/deleted by admins.
- *
- * Data Structure:
- * - /roles_admin/{adminId}:  Admin role assignments.
- * - /teachers/{teacherId}: Teacher profiles and authentication.
- * - /students/{studentId}: Student profiles.
- * - /users/{userId}: Core user data linking auth UID to student profile.
- * - /announcements/{announcementId}: Public announcements.
- * - /complaints/{complaintId}: Centralized collection for all complaints.
- * - /users/{userId}/counselingSessions/{counselingSessionId}: Counseling sessions for individual students.
- * - /users/{userId}/fines/{fineId}: Fines issued to individual students.
- *
- * Key Security Decisions:
- * - Admin role is determined by the existence of a document in `/roles_admin/{adminId}`.
- * - Teacher role is determined by the existence of a a document in `/teachers/{teacherId}`.
- * - User listing is generally disallowed to protect privacy, except for students list for teachers and admins.
- * - Data under `/users/{userId}` is strictly accessible only by the authenticated user matching the `userId`.
- * - Complaint visibility is tightly controlled: teachers see their own, admins see all, and students see their own approved/resolved complaints.
- *
- * Denormalization for Authorization:
- * - Admin and Teacher privileges are checked using the existence of documents in their respective collections. This avoids complex queries within the rules.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the user is signed in.
-     * @return {boolean} True if the user is signed in, false otherwise.
-     */
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user is the owner of the resource.
-     * @param {string} userId The user ID to compare with the authenticated user's ID.
-     * @return {boolean} True if the user is the owner, false otherwise.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the user is an admin based on their email. Does not perform a read.
-     * @return {boolean} True if the user is an admin, false otherwise.
-     */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email.matches(".*@admin.com$");
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    /**
-     * @description Checks if the user is a teacher by verifying the existence of a document in the teachers collection.
-     * @return {boolean} True if the user is a teacher, false otherwise.
-     */
     function isTeacher() {
       return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
-    /**
-     * @description Rules for the admin roles collection.
-     * @path /roles_admin/{adminId}
-     */
+    function isStudent() {
+        // A user is a student if they are not an admin or a teacher.
+        // This relies on the fact that all users are one of the three roles.
+        return isSignedIn() && !isAdmin() && !isTeacher();
+    }
+    
+    // Get the student document ID associated with the current user's auth UID
+    function getStudentId() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId;
+    }
+
+
+    // Admin Roles: Only admins can manage the admin role list.
     match /roles_admin/{adminId} {
-      allow create: if isOwner(adminId);
       allow read, write: if isAdmin();
     }
 
-    /**
-     * @description Rules for the teachers collection.
-     * @path /teachers/{teacherId}
-     */
+    // Teachers Collection: Admins manage teachers. Teachers can read their own profile.
     match /teachers/{teacherId} {
       allow create: if isAdmin();
       allow get: if isOwner(teacherId) || isAdmin();
-      allow list: if isAdmin();
+      allow list: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
-
-    /**
-     * @description Rules for the students collection.
-     * @path /students/{studentId}
-     */
+    
+    // Students Collection: Admins manage students. Teachers can read student data.
     match /students/{studentId} {
       allow create: if isAdmin();
       allow read: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
-     /**
-     * @description Rules for the users collection.
-     * @path /users/{userId}
-     */
+    // Users Collection: Links auth UIDs to student IDs.
     match /users/{userId} {
-        allow create: if isAdmin();
-        allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
     }
 
-
-    /**
-     * @description Rules for the announcements collection.
-     * @path /announcements/{announcementId}
-     */
+    // Announcements Collection: Publicly readable, admin-writable.
     match /announcements/{announcementId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // Complaints Collection: Complex role-based access.
+    match /complaints/{complaintId} {
+      // Create: Only teachers can create complaints, and they must be the author.
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      
+      // Read:
+      // 1. Admins can read all complaints.
+      // 2. Teachers can only read complaints they have submitted.
+      // 3. Students can only read complaints against them if status is 'Approved' or 'Resolved'.
+      allow read: if isAdmin() ||
+                   (isTeacher() && resource.data.teacherId == request.auth.uid) ||
+                   (isStudent() && resource.data.studentId == getStudentId() && (resource.data.status == 'Approved' || resource.data.status == 'Resolved'));
+                   
+      // Update: Only admins can update complaints (e.g., change status).
+      allow update: if isAdmin();
+      
+      // Delete: Only admins can delete complaints.
+      allow delete: if isAdmin();
+    }
     
-    /**
-     * @description Rules for the counselingSessions subcollection under users.
-     * @path /users/{userId}/counselingSessions/{counselingSessionId}
-     */
+    // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
-        allow create: if isAdmin() || (isOwner(userId) && request.resource.data.studentId == userId);
-        allow read: if isAdmin() || isOwner(userId);
-        allow update, delete: if isAdmin();
+      allow read, write: if isAdmin() || isOwner(userId);
     }
 
-    /**
-     * @description Rules for the fines subcollection under users.
-     * @path /users/{userId}/fines/{fineId}
-     */
     match /users/{userId}/fines/{fineId} {
-        allow create: if isAdmin() || (isOwner(userId) && request.resource.data.studentId == userId);
-        allow read: if isAdmin() || isOwner(userId);
-        allow update, delete: if isAdmin();
+      allow read, write: if isAdmin() || isOwner(userId);
     }
   }
 }

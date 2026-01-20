@@ -18,7 +18,6 @@ import { LogOut, ShieldQuestion, Loader2 } from 'lucide-react';
 import { useFirebase } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
