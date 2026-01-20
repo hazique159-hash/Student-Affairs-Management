@@ -33,7 +33,6 @@ const baseNavItems = [
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
   { href: '/counseling', icon: HeartHandshake, label: 'Counseling', roles: ['admin'] },
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
-  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
   { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints', roles: ['admin', 'teacher'] },
   
   // Student
@@ -51,7 +50,6 @@ const adminNavOrder = [
   '/add-student',
   '/add-teacher',
   '/counseling',
-  '/notifications',
   '/admin'
 ];
 
@@ -118,5 +116,3 @@ export function AppNav() {
     </SidebarMenu>
   );
 }
-
-    
