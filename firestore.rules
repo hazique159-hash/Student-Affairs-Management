@@ -59,6 +59,7 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn(); // Students and Teachers can create complaints
       allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Student-specific Subcollections
@@ -75,6 +76,7 @@ service cloud.firestore {
         // Admin can create a complaint in a student's subcollection upon approval
         allow create: if isOwner(userId) || isTeacher() || isAdmin();
         allow update: if isAdmin(); // Admin can update status
+        allow delete: if isAdmin();
     }
   }
 }
