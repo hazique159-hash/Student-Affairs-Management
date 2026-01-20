@@ -10,18 +10,6 @@ export type Student = {
   parentPhone: string;
 };
 
-export type Complaint = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  dateSubmitted: any;
-  violationType: string;
-  teacherId: string;
-  teacherName?: string;
-  status: 'Pending' | 'Approved' | 'Resolved';
-  details: string;
-};
-
 export type Announcement = {
   id: string;
   title: string;

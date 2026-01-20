@@ -1,4 +1,4 @@
-import type { Student, Complaint, Announcement, CounselingSession, Teacher, Fine } from './types';
+import type { Student, Announcement, CounselingSession, Teacher, Fine } from './types';
 
 export const students: Student[] = [
   { id: 'BCS223089', firstName: 'Muhammad', lastName: 'Hazique', department: 'CS', email: 'hazique@example.com', phone: '123-456-7890', parentEmail: 'parent.hazique@example.com', parentPhone: '098-765-4321' },
@@ -8,19 +8,6 @@ export const students: Student[] = [
   { id: 'SE-005', firstName: 'Jane', lastName: 'Smith', department: 'SE', email: 'jane@example.com', phone: '123-456-7890', parentEmail: 'parent.jane@example.com', parentPhone: '098-765-4321' },
   { id: 'BBA-006', firstName: 'Peter', lastName: 'Jones', department: 'BBA', email: 'peter@example.com', phone: '123-456-7890', parentEmail: 'parent.peter@example.com', parentPhone: '098-765-4321' },
   { id: 'BCS223000', firstName: 'Dummy', lastName: 'Student', department: 'SE', email: 'dummy@example.com', phone: '111-222-3333', parentEmail: 'parent.dummy@example.com', parentPhone: '444-555-6666' },
-];
-
-export const predefinedViolations = [
-    'Academic Misconduct',
-    'Disruptive Behavior',
-    'Vandalism',
-    'Late Submission',
-    'Other'
-];
-
-export const complaints: Complaint[] = [
-    { id: 'C001', studentId: 'BCS223089', studentName: 'Muhammad Hazique', dateSubmitted: new Date(2024, 5, 10).toISOString(), violationType: 'Academic Misconduct', teacherId: 'T001', teacherName: 'Mr. Ahmed', status: 'Approved', details: 'Caught cheating during the midterm exam.' },
-    { id: 'C002', studentId: 'BCS223000', studentName: 'Dummy Student', dateSubmitted: new Date(2024, 6, 5).toISOString(), violationType: 'Disruptive Behavior', teacherId: 'T002', teacherName: 'Ms. Fatima', status: 'Resolved', details: 'Repeatedly interrupted the class.' },
 ];
 
 export const announcements: Announcement[] = [

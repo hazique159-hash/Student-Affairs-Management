@@ -116,26 +116,6 @@ service cloud.firestore {
     }
     
     /**
-     * @description Rules for the centralized complaints collection.
-     */
-    match /complaints/{complaintId} {
-      // Create is a single-doc op; `exists()` is allowed. A user must be in the teachers collection.
-      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if isAdmin();
-
-      // Read rule for both GET and LIST queries.
-      // CRITICAL: This rule MUST NOT use `get()` or `exists()` to be valid for LIST queries.
-      // It must rely solely on the user's auth token and the data in the document being read.
-      allow read: if (isAdmin()) || // Admins can read all complaints. This clause is queryable.
-                    (request.auth.uid == resource.data.teacherId) || // Teachers can read their own submitted complaints.
-                    (
-                      request.auth.token.email != null &&
-                      request.auth.token.email.split('@')[0] == resource.data.studentId &&
-                      resource.data.status in ['Approved', 'Resolved']
-                    ); // Students can read their own approved/resolved complaints.
-    }
-
-    /**
      * @description Rules for the counselingSessions subcollection under users.
      * @path /users/{userId}/counselingSessions/{counselingSessionId}
      */

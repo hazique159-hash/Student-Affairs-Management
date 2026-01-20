@@ -75,62 +75,6 @@
         "datePublished"
       ]
     },
-    "Complaint": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Complaint",
-      "type": "object",
-      "description": "Represents a complaint against a student.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Complaint entity."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N Complaint)"
-        },
-        "studentName": {
-          "type": "string",
-          "description": "Name of the student who the complaint is about."
-        },
-        "teacherId": {
-          "type": "string",
-          "description": "Reference to Teacher. (Relationship: Teacher 1:N Complaint)"
-        },
-        "teacherName": {
-          "type": "string",
-          "description": "Name of the teacher who submitted the complaint."
-        },
-        "violationType": {
-          "type": "string",
-          "description": "Type of violation (e.g., academic dishonesty, misconduct)."
-        },
-        "details": {
-          "type": "string",
-          "description": "Specific details about the incident."
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the complaint (e.g., Pending, Approved, Resolved)."
-        },
-        "dateSubmitted": {
-          "type": "string",
-          "description": "Date the complaint was submitted.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "studentName",
-        "teacherId",
-        "teacherName",
-        "violationType",
-        "details",
-        "status",
-        "dateSubmitted"
-      ]
-    },
     "Teacher": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Teacher",
@@ -329,22 +273,6 @@
             {
               "name": "announcementId",
               "description": "The unique ID of the announcement."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/complaints/{complaintId}",
-        "definition": {
-          "entityName": "Complaint",
-          "schema": {
-            "$ref": "#/backend/entities/Complaint"
-          },
-          "description": "Collection to store all complaints submitted by teachers. Admins can approve/resolve them, and students can view their own approved/resolved complaints.",
-          "params": [
-            {
-              "name": "complaintId",
-              "description": "The unique ID of the complaint."
             }
           ]
         }
