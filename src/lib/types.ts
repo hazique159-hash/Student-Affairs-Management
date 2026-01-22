@@ -57,4 +57,10 @@ export type Complaint = {
   filedByName: string;
 };
 
-    
+export type TeacherAvailability = {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  availableDays: string[];
+  availableSlots: string[];
+};

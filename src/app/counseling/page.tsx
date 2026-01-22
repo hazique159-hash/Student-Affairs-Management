@@ -50,10 +50,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 import { counselingSessions } from '@/lib/data';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { Teacher } from '@/lib/types';
+import type { Teacher, TeacherAvailability } from '@/lib/types';
 
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -62,7 +63,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeSlots = [
@@ -94,6 +95,13 @@ export default function CounselingPage() {
   const { data: teachers, isLoading: isLoadingTeachers } =
     useCollection<Teacher>(teachersRef);
 
+  const availabilityRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'counseling_availability') : null),
+    [firestore]
+  );
+  const { data: availableTeachers, isLoading: isLoadingAvailability } =
+    useCollection<TeacherAvailability>(availabilityRef);
+
   const isAdmin = user?.email?.endsWith('@admin.com');
 
   const form = useForm<z.infer<typeof availabilitySchema>>({
@@ -119,7 +127,14 @@ export default function CounselingPage() {
     }
 
     try {
-      await addDoc(collection(firestore, 'counseling_availability'), {
+      const availabilityCollectionRef = collection(
+        firestore,
+        'counseling_availability'
+      );
+      const newAvailDocRef = doc(availabilityCollectionRef);
+
+      await setDoc(newAvailDocRef, {
+        id: newAvailDocRef.id,
         teacherId: values.teacherId,
         teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName}`,
         availableDays: values.availableDays,
@@ -341,6 +356,67 @@ export default function CounselingPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Available Counselors</CardTitle>
+          <CardDescription>
+            Teachers who are currently available for counseling sessions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingAvailability ? (
+            <div className="flex justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : availableTeachers && availableTeachers.length > 0 ? (
+            <ul className="space-y-6">
+              {availableTeachers.map((avail) => (
+                <li
+                  key={avail.id}
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <h3 className="font-semibold">{avail.teacherName}</h3>
+                  </div>
+                  <div className="mt-2 space-y-2 text-sm">
+                    <div>
+                      <h4 className="font-medium text-muted-foreground">
+                        Available Days
+                      </h4>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {avail.availableDays.map((day) => (
+                          <Badge key={day} variant="secondary">
+                            {day}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-muted-foreground">
+                        Available Slots
+                      </h4>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {avail.availableSlots.map((slot) => (
+                          <Badge key={slot} variant="outline">
+                            {slot}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex items-center justify-center h-24">
+              <p className="text-muted-foreground">
+                No teachers have set their availability yet.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Upcoming Sessions</CardTitle>
           <CardDescription>
             Here are the counseling sessions scheduled for the upcoming days.
@@ -394,5 +470,3 @@ export default function CounselingPage() {
     </div>
   );
 }
-
-    
