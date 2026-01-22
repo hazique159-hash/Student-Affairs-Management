@@ -48,8 +48,17 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
-import type { Teacher, TeacherAvailability, Student } from '@/lib/types';
+
+import type { Teacher, TeacherAvailability, Student, CounselingSession } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   useFirebase,
@@ -57,7 +66,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, doc, setDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, where, addDoc, collectionGroup } from 'firebase/firestore';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeSlots = [
@@ -111,6 +120,9 @@ export default function CounselingPage() {
 
   const availabilityRef = useMemoFirebase(() => (firestore ? collection(firestore, 'counseling_availability') : null), [firestore]);
   const { data: availableTeachers, isLoading: isLoadingAvailability } = useCollection<TeacherAvailability>(availabilityRef);
+
+  const sessionsRef = useMemoFirebase(() => (firestore ? collectionGroup(firestore, 'counselingSessions') : null), [firestore]);
+  const { data: scheduledSessions, isLoading: isLoadingSessions } = useCollection<CounselingSession>(sessionsRef);
 
   // Form for Teacher Availability
   const availForm = useForm<z.infer<typeof availabilitySchema>>({
@@ -319,6 +331,45 @@ export default function CounselingPage() {
           )}
         </CardContent>
       </Card>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Upcoming Sessions</CardTitle>
+            <CardDescription>A list of all scheduled counseling sessions.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoadingSessions ? (
+                <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : scheduledSessions && scheduledSessions.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Teacher</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Time</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {scheduledSessions
+                            .sort((a, b) => a.dateScheduled.seconds - b.dateScheduled.seconds)
+                            .map((session) => (
+                                <TableRow key={session.id}>
+                                    <TableCell>{session.studentName}</TableCell>
+                                    <TableCell>{session.teacherName}</TableCell>
+                                    <TableCell>{format(new Date(session.dateScheduled.seconds * 1000), 'PPP')}</TableCell>
+                                    <TableCell>{session.timeSlot}</TableCell>
+                                </TableRow>
+                            ))
+                        }
+                    </TableBody>
+                </Table>
+            ) : (
+                <div className="flex items-center justify-center h-24"><p className="text-muted-foreground">No upcoming sessions.</p></div>
+            )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
