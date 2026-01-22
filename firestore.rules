@@ -21,9 +21,10 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
-    // Admin Roles: Only admins can manage the admin role list.
+    // Admin Roles: A user can check their own admin status. Only admins can manage other admins.
     match /roles_admin/{adminId} {
-      allow read, write: if isAdmin();
+      allow get: if isOwner(adminId) || isAdmin();
+      allow list, create, update, delete: if isAdmin();
     }
 
     // Teachers Collection: Admins manage teachers. Teachers can read their own profile.
