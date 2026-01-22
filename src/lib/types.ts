@@ -21,11 +21,14 @@ export type Announcement = {
 };
 
 export type CounselingSession = {
-    id: string;
-    studentId: string;
-    studentName: string;
-    date: Date;
-    time: string;
+  id: string;
+  studentId: string; // registration number
+  studentName: string;
+  teacherId: string;
+  teacherName: string;
+  dateScheduled: any; // Firestore timestamp
+  timeSlot: string;
+  notes?: string;
 };
 
 export type Teacher = {
