@@ -274,6 +274,54 @@
         "status",
         "dateSubmitted"
       ]
+    },
+    "TeacherAvailability": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TeacherAvailability",
+      "type": "object",
+      "description": "Defines a teacher's available days and time slots for counseling.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the availability entry."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher entity."
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Full name of the teacher."
+        },
+        "availableDays": {
+          "type": "array",
+          "description": "Days of the week the teacher is available.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday"
+            ]
+          }
+        },
+        "availableSlots": {
+          "type": "array",
+          "description": "Time slots the teacher is available.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "teacherId",
+        "teacherName",
+        "availableDays",
+        "availableSlots"
+      ]
     }
   },
   "auth": {
@@ -423,8 +471,26 @@
             }
           ]
         }
+      },
+      {
+        "path": "/counseling_availability/{availabilityId}",
+        "definition": {
+          "entityName": "TeacherAvailability",
+          "schema": {
+            "$ref": "#/backend/entities/TeacherAvailability"
+          },
+          "description": "Collection to store teacher availability for counseling sessions.",
+          "params": [
+            {
+              "name": "availabilityId",
+              "description": "The unique ID of the availability entry."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability. It leverages denormalization and structural segregation to simplify security rules and enable atomic operations. The design incorporates explicit state modeling and consistent naming conventions for improved debuggability and maintainability.\\n\\n**Authorization Independence:** Authorization is enforced without relying on hierarchical `get()` calls, which could compromise atomic operations. For collaborative data, a membership map (`members`) is used. For user-owned data, the path-based ownership is applied. \\n\\n**QAPs Support:** The structure supports secure `list` operations (QAPs) by segregating data based on access requirements and using dedicated collections for global roles. Segregation of `announcements` enables public list access while private student data is secured by user-specific paths.\\n\\nThe structure includes collections for `admins`, `teachers`, `students`, `announcements`, `counselingSessions`, and `fines`. Admin roles are managed through a dedicated `/roles_admin/{uid}` collection, using existence checks in security rules. Teacher roles are managed through a dedicated `/teachers/{teacherId}` collection, again using existence checks. Student-specific data, such as counseling sessions and fines, are stored under `/users/{userId}/counselingSessions/{counselingSessionId}` and `/users/{userId}/fines/{fineId}`, respectively, to ensure proper data ownership and authorization."
   }
 }
+
+    

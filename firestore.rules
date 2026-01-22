@@ -61,6 +61,12 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+    
+    // Counseling Availability: Admin can manage, signed-in users can read.
+    match /counseling_availability/{availabilityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
 
     // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
@@ -80,3 +86,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
