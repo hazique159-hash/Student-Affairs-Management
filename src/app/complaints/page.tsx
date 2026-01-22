@@ -37,6 +37,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
@@ -45,6 +54,7 @@ export default function ComplaintsPage() {
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingComplaint, setViewingComplaint] = useState<Complaint | null>(null);
 
   const complaintsRef = useMemoFirebase(
     () =>
@@ -247,7 +257,7 @@ export default function ComplaintsPage() {
                             </Button>
                           )}
                           
-                          <Button variant="ghost" size="sm" disabled>View Details</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View Details</Button>
                           
                           {isAdmin && (
                             <AlertDialog>
@@ -290,6 +300,43 @@ export default function ComplaintsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {viewingComplaint && (
+        <Dialog open={!!viewingComplaint} onOpenChange={(isOpen) => !isOpen && setViewingComplaint(null)}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{viewingComplaint.title}</DialogTitle>
+                    <DialogDescription>
+                        Details for the complaint filed on {viewingComplaint.dateSubmitted?.seconds ? format(new Date(viewingComplaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}.
+                    </DialogDescription>
+                </DialogHeader>
+                <Separator />
+                <div className="grid gap-4 py-4 text-sm">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Student</span>
+                        <span className="col-span-2">{viewingComplaint.studentName} ({viewingComplaint.studentId})</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Filed By</span>
+                        <span className="col-span-2">{viewingComplaint.filedByName}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Status</span>
+                        <span className="col-span-2"><Badge variant={viewingComplaint.status === 'Rejected' ? 'destructive' : viewingComplaint.status === 'Resolved' ? 'secondary' : viewingComplaint.status === 'Approved' ? 'default' : 'outline'}>{viewingComplaint.status}</Badge></span>
+                    </div>
+                     <Separator />
+                    <div>
+                        <p className="font-semibold mb-2 text-muted-foreground">Description</p>
+                        <p className="whitespace-pre-wrap">{viewingComplaint.description}</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setViewingComplaint(null)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
+
     </div>
   );
 }
