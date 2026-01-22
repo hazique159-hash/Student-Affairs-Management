@@ -16,6 +16,7 @@ export type Announcement = {
   title: string;
   content: string;
   datePublished: any;
+  imageUrl?: string;
 };
 
 export type CounselingSession = {

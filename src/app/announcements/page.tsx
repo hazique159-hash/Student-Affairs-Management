@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Megaphone, Plus, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
+import { Megaphone, Plus, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -52,6 +53,7 @@ const announcementSchema = z.object({
   content: z
     .string()
     .min(20, { message: 'Content must be at least 20 characters.' }),
+  imageUrl: z.string().optional(),
 });
 
 export default function AnnouncementsPage() {
@@ -59,6 +61,8 @@ export default function AnnouncementsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const announcementsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'announcements') : null),
@@ -74,6 +78,7 @@ export default function AnnouncementsPage() {
     defaultValues: {
       title: '',
       content: '',
+      imageUrl: '',
     },
   });
 
@@ -90,6 +95,10 @@ export default function AnnouncementsPage() {
         description: 'The announcement is now live for all users.',
       });
       form.reset();
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       setIsSheetOpen(false);
     } catch (error: any) {
       toast({
@@ -97,6 +106,37 @@ export default function AnnouncementsPage() {
         title: 'Failed to Publish',
         description: error.message || 'An unexpected error occurred.',
       });
+    }
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          variant: 'destructive',
+          title: 'Image too large',
+          description: 'Please select an image smaller than 2MB.',
+        });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('imageUrl', reader.result as string);
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearImage = () => {
+    form.setValue('imageUrl', '');
+    setImagePreview(null);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
     }
   };
 
@@ -108,7 +148,13 @@ export default function AnnouncementsPage() {
         description="Stay updated with the latest news and announcements from the institution."
       >
         {isAdmin && (
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <Sheet open={isSheetOpen} onOpenChange={(isOpen) => {
+            setIsSheetOpen(isOpen);
+            if (!isOpen) {
+              form.reset();
+              clearImage();
+            }
+          }}>
             <SheetTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -128,7 +174,7 @@ export default function AnnouncementsPage() {
                       teachers.
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="py-6 space-y-6 flex-1 overflow-y-auto">
+                  <div className="py-6 space-y-6 flex-1 overflow-y-auto px-1">
                     <FormField
                       control={form.control}
                       name="title"
@@ -154,7 +200,7 @@ export default function AnnouncementsPage() {
                           <FormControl>
                             <Textarea
                               placeholder="Provide the full details of the announcement here..."
-                              className="min-h-[200px]"
+                              className="min-h-[150px]"
                               {...field}
                             />
                           </FormControl>
@@ -162,6 +208,44 @@ export default function AnnouncementsPage() {
                         </FormItem>
                       )}
                     />
+                     <FormField
+                      control={form.control}
+                      name="imageUrl"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Image (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              ref={fileInputRef}
+                              onChange={handleImageChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {imagePreview && (
+                      <div className="relative">
+                          <Image
+                              src={imagePreview}
+                              alt="Image Preview"
+                              width={400}
+                              height={225}
+                              className="rounded-md object-cover w-full h-auto border"
+                          />
+                          <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7"
+                              onClick={clearImage}
+                          >
+                              <X className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    )}
                   </div>
                   <SheetFooter>
                     <SheetClose asChild>
@@ -220,7 +304,17 @@ export default function AnnouncementsPage() {
                       : '...'}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {announcement.imageUrl && (
+                    <div className="relative aspect-video">
+                      <Image
+                        src={announcement.imageUrl}
+                        alt={announcement.title}
+                        fill
+                        className="rounded-md object-cover border"
+                      />
+                    </div>
+                  )}
                   <p className="whitespace-pre-wrap">{announcement.content}</p>
                 </CardContent>
               </Card>
