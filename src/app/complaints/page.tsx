@@ -22,7 +22,7 @@ import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, writeBatch, doc, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, writeBatch, doc, getDocs, where, increment } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -90,7 +90,13 @@ export default function ComplaintsPage() {
         const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
         batch.update(filerComplaintRef, { status: newStatus });
 
-        // 3. Update student's copy
+        // 3. If complaint is being approved for the first time, increment student's complaint count
+        if (newStatus === 'Approved' && complaint.status !== 'Approved') {
+            const studentRef = doc(firestore, 'students', complaint.studentId);
+            batch.update(studentRef, { complaintCount: increment(1) });
+        }
+        
+        // 4. Update student's personal copy of the complaint
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 

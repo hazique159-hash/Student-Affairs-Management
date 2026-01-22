@@ -104,6 +104,7 @@ export default function AddStudentPage() {
           department: values.department,
           parentEmail: '',
           parentPhoneNumber: '',
+          complaintCount: 0,
         });
         
         // Also create a user document in the `users` collection for fines/counseling etc.

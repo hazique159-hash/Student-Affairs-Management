@@ -9,6 +9,7 @@ export type Student = {
   phone: string;
   parentEmail: string;
   parentPhone: string;
+  complaintCount?: number;
 };
 
 export type Announcement = {

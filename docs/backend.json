@@ -34,6 +34,10 @@
         "parentPhoneNumber": {
           "type": "string",
           "description": "Parent's phone number for SMS and WhatsApp notifications."
+        },
+        "complaintCount": {
+          "type": "number",
+          "description": "The number of approved complaints against the student."
         }
       },
       "required": [

@@ -108,6 +108,7 @@ export default function StudentsPage() {
                 <TableHead>Student ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Complaints</TableHead>
                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -123,6 +124,9 @@ export default function StudentsPage() {
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-6 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-12" />
                     </TableCell>
                     {isAdmin && (
                         <TableCell className="text-right">
@@ -154,6 +158,11 @@ export default function StudentsPage() {
                         }
                       >
                         {student.department}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={(student.complaintCount ?? 0) > 2 ? 'destructive' : (student.complaintCount ?? 0) > 0 ? 'secondary' : 'outline'}>
+                        {student.complaintCount ?? 0}
                       </Badge>
                     </TableCell>
                     {isAdmin && (
