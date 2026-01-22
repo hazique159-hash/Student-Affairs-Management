@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquareWarning, Loader2, Trash2 } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -65,39 +65,50 @@ export default function ComplaintsPage() {
     }
   }, [isUserLoading, user, isAdmin, router]);
 
-  const handleStatusUpdate = async (complaint: Complaint, newStatus: 'Approved' | 'Rejected') => {
+  const handleStatusUpdate = async (complaint: Complaint, newStatus: 'Approved' | 'Rejected' | 'Resolved') => {
     if (!firestore || !isAdmin) return;
     setUpdatingId(complaint.id);
 
     try {
         const batch = writeBatch(firestore);
 
+        // 1. Update master complaint
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
+        // 2. Update filer's copy
         const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
         batch.update(filerComplaintRef, { status: newStatus });
-        
-        if (newStatus === 'Approved') {
-            const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
-            const studentUserSnapshot = await getDocs(studentUserQuery);
-            if (!studentUserSnapshot.empty) {
-                const studentUserDoc = studentUserSnapshot.docs[0];
-                const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+
+        // 3. Update student's copy
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
+        const studentUserSnapshot = await getDocs(studentUserQuery);
+
+        if (!studentUserSnapshot.empty) {
+            const studentUserDoc = studentUserSnapshot.docs[0];
+            const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+
+            if (newStatus === 'Approved') {
+                // On first approval, set the whole document for the student
                 batch.set(studentComplaintRef, {
                     ...complaint,
                     status: newStatus,
                     dateSubmitted: complaint.dateSubmitted,
                 });
-            } else {
-                console.warn(`Could not find user account for student ID: ${complaint.studentId}. Complaint will not be visible to student.`);
+            } else if (newStatus === 'Resolved' && complaint.status === 'Approved') {
+                // If resolving an approved complaint, update the student's copy
+                batch.update(studentComplaintRef, { status: newStatus });
+            }
+        } else {
+            if (newStatus !== 'Rejected') {
+              console.warn(`Could not find user account for student ID: ${complaint.studentId}. Complaint will not be visible to student.`);
             }
         }
-
+        
         await batch.commit();
         toast({
             title: `Complaint ${newStatus}`,
-            description: `The complaint against ${complaint.studentName} has been ${newStatus.toLowerCase()}.`
+            description: `The complaint has been marked as ${newStatus.toLowerCase()}.`
         });
 
     } catch (error: any) {
@@ -157,53 +168,70 @@ export default function ComplaintsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Student Complaints"
-        icon={MessageSquareWarning}
-        description="Review and manage all submitted student complaints."
+        title="Complaint Management"
+        icon={ShieldQuestion}
+        description="Review, approve, and manage all student complaints."
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Complaint Inbox</CardTitle>
+          <CardTitle>All Complaints</CardTitle>
           <CardDescription>
-            All active and resolved complaints are listed below.
+            Review, approve, and manage all student complaints.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Teacher</TableHead>
+                <TableHead>Violation</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Student ID</TableHead>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Filed By</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead className="text-right">Status / Action</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-40 ml-auto" /></TableCell>
                   </TableRow>
                 ))}
               {!isLoading && complaints && complaints.length > 0 ? (
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
-                    <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell>{complaint.studentId}</TableCell>
-                    <TableCell>{complaint.studentName}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{complaint.studentName}</div>
+                      <div className="text-sm text-muted-foreground">{complaint.studentId}</div>
+                    </TableCell>
                     <TableCell>{complaint.filedByName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
+                    <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>
+                        <Badge
+                            variant={
+                            complaint.status === 'Rejected'
+                                ? 'destructive'
+                                : complaint.status === 'Resolved'
+                                ? 'secondary'
+                                : complaint.status === 'Approved'
+                                ? 'default'
+                                : 'outline'
+                            }
+                        >
+                            {complaint.status}
+                        </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                        <div className="flex items-center justify-end gap-2">
-                        {(complaint.status === 'Pending' || complaint.status === 'Open') && isAdmin ? (
+                        {complaint.status === 'Pending' && isAdmin && (
                             <>
                                 <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
                                    {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
@@ -212,25 +240,20 @@ export default function ComplaintsPage() {
                                    Reject
                                 </Button>
                             </>
-                          ) : (
-                            <Badge
-                              variant={
-                                complaint.status === 'Rejected' || complaint.status === 'Resolved'
-                                  ? 'secondary'
-                                  : complaint.status === 'Approved'
-                                  ? 'default'
-                                  : 'destructive'
-                              }
-                            >
-                              {complaint.status}
-                            </Badge>
                           )}
+                          {complaint.status === 'Approved' && isAdmin && (
+                            <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Resolved')} disabled={updatingId === complaint.id}>
+                                {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resolve'}
+                            </Button>
+                          )}
+                          
+                          <Button variant="ghost" size="sm" disabled>View Details</Button>
                           
                           {isAdmin && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={deletingId === complaint.id}>
+                                  {deletingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin"/> :<Trash2 className="h-4 w-4" />}
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
