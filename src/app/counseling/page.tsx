@@ -1,4 +1,5 @@
-import { HeartHandshake, Plus, Calendar as CalendarIcon } from "lucide-react";
+'use client';
+import { HeartHandshake, Plus, Calendar as CalendarIcon, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
@@ -17,10 +18,16 @@ export default function CounselingPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Counseling Services" icon={HeartHandshake} description="Schedule and manage student counseling sessions.">
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Schedule Session
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Available Teacher
+          </Button>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Schedule Session
+          </Button>
+        </div>
       </PageHeader>
       
       <Card>
