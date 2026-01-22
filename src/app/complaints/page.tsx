@@ -18,10 +18,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import type { Complaint } from '@/lib/types';
+import type { Complaint, Student } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, writeBatch, doc, getDocs, where, increment } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -65,9 +65,23 @@ export default function ComplaintsPage() {
   );
   const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
 
-  const isLoading = isUserLoading || isLoadingComplaints;
+  const studentsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'students') : null),
+    [firestore]
+  );
+  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
+
+  const isLoading = isUserLoading || isLoadingComplaints || isLoadingStudents;
 
   const isAdmin = user?.email?.endsWith('@admin.com');
+  
+  const studentComplaintCounts = useMemo(() => {
+    if (!students) return {};
+    return students.reduce((acc, student) => {
+      acc[student.id] = student.complaintCount ?? 0;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [students]);
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
@@ -201,6 +215,7 @@ export default function ComplaintsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Student</TableHead>
+                <TableHead>Complaint No.</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Violation</TableHead>
                 <TableHead>Date</TableHead>
@@ -213,6 +228,7 @@ export default function ComplaintsPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -226,6 +242,11 @@ export default function ComplaintsPage() {
                     <TableCell>
                       <div className="font-medium">{complaint.studentName}</div>
                       <div className="text-sm text-muted-foreground">{complaint.studentId}</div>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={(studentComplaintCounts[complaint.studentId] ?? 0) > 2 ? 'destructive' : (studentComplaintCounts[complaint.studentId] ?? 0) > 0 ? 'secondary' : 'outline'}>
+                            {studentComplaintCounts[complaint.studentId] ?? 0}
+                        </Badge>
                     </TableCell>
                     <TableCell>{complaint.filedByName}</TableCell>
                     <TableCell>{complaint.title}</TableCell>
@@ -296,7 +317,7 @@ export default function ComplaintsPage() {
               ) : (
                 !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={7} className="text-center h-24">
                       There are no complaints at this time.
                     </TableCell>
                   </TableRow>
