@@ -136,66 +136,68 @@ export default function StudentsPage() {
                   </TableRow>
                 ))}
               {!isLoading &&
-                students?.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.id}</TableCell>
-                    <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          student.department === 'CS'
-                            ? 'default'
-                            : student.department === 'SE'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                        className={
-                          student.department === 'CS'
-                            ? 'bg-blue-100 text-blue-800'
-                            : student.department === 'SE'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-green-100 text-green-800'
-                        }
-                      >
-                        {student.department}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={(student.complaintCount ?? 0) > 2 ? 'destructive' : (student.complaintCount ?? 0) > 0 ? 'secondary' : 'outline'}>
-                        {student.complaintCount ?? 0}
-                      </Badge>
-                    </TableCell>
-                    {isAdmin && (
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => router.push(`/edit-student/${student.id}`)}>
-                              Edit
-                          </Button>
-                          <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                      Delete
-                                  </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                          This action cannot be undone. This will permanently delete the student record for {student.firstName} {student.lastName}. The student's login may remain but will not be associated with any records.
-                                      </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDelete(student)} disabled={isDeleting === student.id}>
-                                        {isDeleting === student.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                        Continue
-                                      </AlertDialogAction>
-                                  </AlertDialogFooter>
-                              </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                students
+                  ?.sort((a, b) => (b.complaintCount ?? 0) - (a.complaintCount ?? 0))
+                  .map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.id}</TableCell>
+                      <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            student.department === 'CS'
+                              ? 'default'
+                              : student.department === 'SE'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className={
+                            student.department === 'CS'
+                              ? 'bg-blue-100 text-blue-800'
+                              : student.department === 'SE'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-green-100 text-green-800'
+                          }
+                        >
+                          {student.department}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={(student.complaintCount ?? 0) > 2 ? 'destructive' : (student.complaintCount ?? 0) > 0 ? 'secondary' : 'outline'}>
+                          {student.complaintCount ?? 0}
+                        </Badge>
+                      </TableCell>
+                      {isAdmin && (
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => router.push(`/edit-student/${student.id}`)}>
+                                Edit
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                        Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the student record for {student.firstName} {student.lastName}. The student's login may remain but will not be associated with any records.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(student)} disabled={isDeleting === student.id}>
+                                          {isDeleting === student.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                          Continue
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
             </TableBody>
           </Table>
         </CardContent>
