@@ -159,6 +159,7 @@ export default function ComplaintsPage() {
     try {
       const batch = writeBatch(firestore);
 
+      // Delete complaint from all relevant collections
       const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
       batch.delete(masterComplaintRef);
 
@@ -171,6 +172,12 @@ export default function ComplaintsPage() {
           const studentUserDoc = studentUserSnapshot.docs[0];
           const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
           batch.delete(studentComplaintRef);
+      }
+      
+      // If the deleted complaint had been approved, decrement the student's complaintCount
+      if (complaint.status === 'Approved' || complaint.status === 'Resolved') {
+          const studentRef = doc(firestore, 'students', complaint.studentId);
+          batch.update(studentRef, { complaintCount: increment(-1) });
       }
 
       await batch.commit();
