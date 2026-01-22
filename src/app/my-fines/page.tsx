@@ -1,5 +1,5 @@
 'use client';
-import { CircleDollarSign } from 'lucide-react';
+import { CircleDollarSign, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -17,16 +17,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import type { Fine } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fines as allFines } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MyFinesPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
+
+  const [fines, setFines] = useState<Fine[]>([]);
+  const [payingFineId, setPayingFineId] = useState<string | null>(null);
 
   useEffect(() => {
       if (!isUserLoading && !user) {
@@ -36,14 +42,32 @@ export default function MyFinesPage() {
 
   const studentId = useMemo(() => {
     if (!user?.email) return null;
-    // Assuming student ID is the part of the email before the '@'
     return user.email.split('@')[0].toUpperCase();
   }, [user]);
 
-  const fines = useMemo(() => {
-    if (!studentId) return [];
-    return allFines.filter(fine => fine.studentId === studentId);
+  useEffect(() => {
+    if (studentId) {
+      const studentFines = allFines.filter(fine => fine.studentId === studentId);
+      setFines(studentFines);
+    }
   }, [studentId]);
+
+  const handlePayFine = (fineId: string) => {
+    setPayingFineId(fineId);
+    // Simulate payment processing
+    setTimeout(() => {
+      setFines(prevFines =>
+        prevFines.map(fine =>
+          fine.id === fineId ? { ...fine, isPaid: true } : fine
+        )
+      );
+      setPayingFineId(null);
+      toast({
+        title: 'Payment Successful',
+        description: 'Your fine has been marked as paid.',
+      });
+    }, 1500);
+  };
 
   const isLoading = isUserLoading;
 
@@ -70,7 +94,8 @@ export default function MyFinesPage() {
                 <TableHead>Reason</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Due Date</TableHead>
-                <TableHead className="text-right">Status</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -81,7 +106,8 @@ export default function MyFinesPage() {
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                   </TableRow>
                 ))}
               {!isLoading && fines && fines.length > 0 ? (
@@ -91,17 +117,33 @@ export default function MyFinesPage() {
                     <TableCell>{fine.reason}</TableCell>
                     <TableCell>PKR {fine.amount.toFixed(2)}</TableCell>
                     <TableCell>{new Date(fine.dateDue).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
                       <Badge variant={fine.isPaid ? 'secondary' : 'destructive'}>
                         {fine.isPaid ? 'Paid' : 'Unpaid'}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {fine.isPaid ? (
+                        <span className="text-sm text-muted-foreground">Cleared</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handlePayFine(fine.id)}
+                          disabled={payingFineId === fine.id}
+                        >
+                          {payingFineId === fine.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Pay Fine
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={6} className="text-center h-24">
                       You have no fines. Great job!
                     </TableCell>
                   </TableRow>
