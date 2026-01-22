@@ -69,6 +69,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // This rule allows an admin to query the 'counselingSessions' collection group.
+    match /{path=**}/counselingSessions/{counselingSessionId} {
+      allow get, list: if isAdmin();
+    }
+
     // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
       allow read, write: if isAdmin() || isOwner(userId);
