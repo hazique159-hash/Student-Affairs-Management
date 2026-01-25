@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Megaphone, Plus, Loader2, X } from 'lucide-react';
+import { Megaphone, Plus, Loader2, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,6 +21,17 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -41,7 +52,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/page-header';
 import type { Announcement } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,6 +74,7 @@ export default function AnnouncementsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const announcementsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'announcements') : null),
@@ -137,6 +149,27 @@ export default function AnnouncementsPage() {
     setImagePreview(null);
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (announcementId: string) => {
+    if (!firestore || !isAdmin) return;
+    setDeletingId(announcementId);
+
+    try {
+        await deleteDoc(doc(firestore, 'announcements', announcementId));
+        toast({
+            title: 'Announcement Deleted',
+            description: 'The announcement has been successfully removed.',
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error.message || 'Could not delete the announcement.',
+        });
+    } finally {
+        setDeletingId(null);
     }
   };
 
@@ -291,18 +324,46 @@ export default function AnnouncementsPage() {
             .map((announcement) => (
               <Card key={announcement.id}>
                 <CardHeader>
-                  <CardTitle>{announcement.title}</CardTitle>
-                  <CardDescription>
-                    Published on{' '}
-                    {announcement.datePublished
-                      ? format(
-                          new Date(
-                            (announcement.datePublished as any).seconds * 1000
-                          ),
-                          'PPP'
-                        )
-                      : '...'}
-                  </CardDescription>
+                   <div className="flex items-start justify-between gap-4">
+                     <div>
+                        <CardTitle>{announcement.title}</CardTitle>
+                        <CardDescription>
+                            Published on{' '}
+                            {announcement.datePublished
+                            ? format(
+                                new Date(
+                                    (announcement.datePublished as any).seconds * 1000
+                                ),
+                                'PPP'
+                                )
+                            : '...'}
+                        </CardDescription>
+                     </div>
+                     {isAdmin && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive flex-shrink-0" disabled={deletingId === announcement.id}>
+                                    {deletingId === announcement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the announcement titled "{announcement.title}".
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(announcement.id)} disabled={deletingId === announcement.id}>
+                                        {deletingId === announcement.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                     )}
+                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {announcement.imageUrl && (
