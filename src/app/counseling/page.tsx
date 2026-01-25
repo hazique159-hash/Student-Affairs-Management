@@ -103,13 +103,17 @@ export default function CounselingPage() {
   const { toast } = useToast();
 
   const isAdmin = user?.email?.endsWith('@admin.com');
-  const isStudent = user?.email?.endsWith('@student.com');
 
   useEffect(() => {
-    if (!isUserLoading && isStudent) {
+    if (!isUserLoading && !isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Access Denied',
+        description: 'You do not have permission to view this page.',
+      });
       router.push('/announcements');
     }
-  }, [isUserLoading, isStudent, router]);
+  }, [isUserLoading, isAdmin, router, toast]);
 
   // Data Fetching
   const teachersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'teachers') : null), [firestore]);
@@ -121,7 +125,7 @@ export default function CounselingPage() {
   const availabilityRef = useMemoFirebase(() => (firestore ? collection(firestore, 'counseling_availability') : null), [firestore]);
   const { data: availableTeachers, isLoading: isLoadingAvailability } = useCollection<TeacherAvailability>(availabilityRef);
 
-  const sessionsRef = useMemoFirebase(() => (firestore ? collectionGroup(firestore, 'counselingSessions') : null), [firestore]);
+  const sessionsRef = useMemoFirebase(() => (firestore && isAdmin ? collectionGroup(firestore, 'counselingSessions') : null), [firestore, isAdmin]);
   const { data: scheduledSessions, isLoading: isLoadingSessions } = useCollection<CounselingSession>(sessionsRef);
 
   // Form for Teacher Availability
@@ -205,7 +209,7 @@ export default function CounselingPage() {
     }
   };
 
-  if (isUserLoading || isStudent) {
+  if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
 
