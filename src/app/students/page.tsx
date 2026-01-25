@@ -1,5 +1,5 @@
 'use client';
-import { Users, Plus, Loader2 } from 'lucide-react';
+import { Users, Plus, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 export default function StudentsPage() {
   const firestore = useFirestore();
@@ -37,6 +38,7 @@ export default function StudentsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const studentsRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'students') : null),
@@ -45,6 +47,10 @@ export default function StudentsPage() {
   const { data: students, isLoading } = useCollection<Student>(studentsRef);
 
   const isAdmin = user?.email?.endsWith('@admin.com');
+
+  const filteredStudents = students?.filter(student =>
+    student.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleDelete = async (studentToDelete: Student) => {
     if (!firestore || !isAdmin) return;
@@ -101,6 +107,17 @@ export default function StudentsPage() {
       </PageHeader>
 
       <Card>
+        <div className="border-b p-4">
+            <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by Registration No..."
+                    className="pl-8 w-full max-w-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </div>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -136,7 +153,7 @@ export default function StudentsPage() {
                   </TableRow>
                 ))}
               {!isLoading &&
-                students
+                filteredStudents
                   ?.sort((a, b) => (b.complaintCount ?? 0) - (a.complaintCount ?? 0))
                   .map((student) => (
                     <TableRow key={student.id}>
@@ -198,6 +215,13 @@ export default function StudentsPage() {
                       )}
                     </TableRow>
                   ))}
+               {!isLoading && filteredStudents?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center">
+                    No students found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
