@@ -23,7 +23,7 @@ service cloud.firestore {
 
     // Admin Roles: A user can check their own admin status. Only admins can manage other admins.
     match /roles_admin/{adminId} {
-      allow get: if isOwner(adminId) || isAdmin();
+      allow get: if isOwner(adminId);
       allow list, create, update, delete: if isAdmin();
     }
 
