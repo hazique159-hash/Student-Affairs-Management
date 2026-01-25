@@ -35,6 +35,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection, writeBatch, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import type { Student, Teacher } from '@/lib/types';
+import { useState } from 'react';
 
 
 const complaintSchema = z.object({
@@ -47,12 +48,18 @@ export default function RegisterComplaintPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const isTeacher = user?.email && !user.email.endsWith('@student.com') && !user.email.endsWith('@admin.com');
   const isStudent = user?.email?.endsWith('@student.com');
 
   const studentsRef = useMemoFirebase(() => (firestore && isTeacher ? collection(firestore, 'students') : null), [firestore, isTeacher]);
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
+
+  const filteredStudents = students?.filter(student =>
+    `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const form = useForm<z.infer<typeof complaintSchema>>({
     resolver: zodResolver(complaintSchema.refine(data => !isTeacher || (isTeacher && data.studentId), {
@@ -177,30 +184,37 @@ export default function RegisterComplaintPage() {
             </CardHeader>
             <CardContent className="grid gap-6">
                 {isTeacher && (
-                    <FormField
-                    control={form.control}
-                    name="studentId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Student</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger disabled={isLoadingStudents}>
-                                <SelectValue placeholder={isLoadingStudents ? "Loading students..." : "Select a student"} />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {students?.map(student => (
-                                    <SelectItem key={student.id} value={student.id}>
-                                        {student.firstName} {student.lastName} ({student.id})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                    <>
+                        <Input
+                            placeholder="Search student by name or registration no..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="studentId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Student</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger disabled={isLoadingStudents}>
+                                    <SelectValue placeholder={isLoadingStudents ? "Loading students..." : "Select a student"} />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {filteredStudents?.map(student => (
+                                        <SelectItem key={student.id} value={student.id}>
+                                            {student.firstName} {student.lastName} ({student.id})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </>
                 )}
               <FormField
                 control={form.control}

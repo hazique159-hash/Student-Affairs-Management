@@ -38,7 +38,8 @@ service cloud.firestore {
     // Students Collection: Admins manage students. Teachers can read student data.
     match /students/{studentId} {
       allow create: if isAdmin();
-      allow read: if isAdmin() || isTeacher();
+      allow get: if isAdmin() || isTeacher();
+      allow list: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
