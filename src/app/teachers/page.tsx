@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Plus, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 
 export default function TeachersPage() {
   const firestore = useFirestore();
@@ -36,6 +37,7 @@ export default function TeachersPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const teachersRef = useMemoFirebase(
     () => (firestore && user?.email?.endsWith('@admin.com') ? collection(firestore, 'teachers') : null),
@@ -45,6 +47,13 @@ export default function TeachersPage() {
   
   const isLoading = isUserLoading || isLoadingTeachers;
   const isAdmin = user?.email?.endsWith('@admin.com');
+
+  const filteredTeachers = teachers?.filter(
+    (teacher) =>
+      teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
@@ -101,6 +110,17 @@ export default function TeachersPage() {
       </PageHeader>
 
       <Card>
+        <div className="border-b p-4">
+            <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search by name or email..."
+                    className="pl-8 w-full max-w-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </div>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -128,7 +148,7 @@ export default function TeachersPage() {
                   </TableRow>
                 ))}
               {!isLoading &&
-                teachers?.map((teacher) => (
+                filteredTeachers?.map((teacher) => (
                   <TableRow key={teacher.id}>
                     <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
                     <TableCell>{teacher.email}</TableCell>
@@ -163,6 +183,13 @@ export default function TeachersPage() {
                     )}
                   </TableRow>
                 ))}
+                {!isLoading && filteredTeachers?.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={isAdmin ? 3 : 2} className="h-24 text-center">
+                        No teachers found.
+                        </TableCell>
+                    </TableRow>
+                )}
             </TableBody>
           </Table>
         </CardContent>
