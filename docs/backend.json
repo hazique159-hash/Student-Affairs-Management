@@ -342,6 +342,57 @@
         "availableDays",
         "availableSlots"
       ]
+    },
+    "VolunteerApplication": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "VolunteerApplication",
+      "type": "object",
+      "description": "Represents a student's application to volunteer for an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the VolunteerApplication entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "The registration number of the student applying."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "The name of the student applying."
+        },
+        "eventName": {
+          "type": "string",
+          "description": "The name of the event the student is volunteering for."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The student's reason for wanting to volunteer."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Pending",
+            "Approved",
+            "Rejected"
+          ],
+          "description": "The current status of the application."
+        },
+        "dateApplied": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the application was submitted."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "eventName",
+        "reason",
+        "status",
+        "dateApplied"
+      ]
     }
   },
   "auth": {
@@ -504,6 +555,42 @@
             {
               "name": "availabilityId",
               "description": "The unique ID of the availability entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/volunteerApplications/{applicationId}",
+        "definition": {
+          "entityName": "VolunteerApplication",
+          "schema": {
+            "$ref": "#/backend/entities/VolunteerApplication"
+          },
+          "description": "Top-level collection for all volunteer applications, for admin overview.",
+          "params": [
+            {
+              "name": "applicationId",
+              "description": "The unique ID of the volunteer application."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/volunteerApplications/{applicationId}",
+        "definition": {
+          "entityName": "VolunteerApplication",
+          "schema": {
+            "$ref": "#/backend/entities/VolunteerApplication"
+          },
+          "description": "Subcollection to store volunteer applications submitted by each student.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The user ID (student auth ID) of the student who applied."
+            },
+            {
+              "name": "applicationId",
+              "description": "The unique ID of the volunteer application."
             }
           ]
         }

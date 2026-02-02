@@ -69,6 +69,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+    
+    // Volunteer Applications: Admins can manage, signed-in users can create.
+    match /volunteerApplications/{applicationId} {
+      allow get, list, update: if isAdmin();
+      allow create: if isSignedIn();
+    }
 
     // This rule allows an admin to query the 'counselingSessions' collection group.
     match /{path=**}/counselingSessions/{counselingSessionId} {
@@ -91,7 +97,10 @@ service cloud.firestore {
         allow update: if isAdmin(); // Admin can update status
         allow delete: if isAdmin();
     }
+    
+    match /users/{userId}/volunteerApplications/{applicationId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isAdmin(); // Admin can sync status
+    }
   }
 }
-
-    

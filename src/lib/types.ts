@@ -67,3 +67,13 @@ export type TeacherAvailability = {
   availableDays: string[];
   availableSlots: string[];
 };
+
+export type VolunteerApplication = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  eventName: string;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  dateApplied: any;
+};
