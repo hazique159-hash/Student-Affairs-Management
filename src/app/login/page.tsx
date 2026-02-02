@@ -132,7 +132,7 @@ export default function LoginPage() {
           alt={loginBg.description}
           data-ai-hint={loginBg.imageHint}
           fill
-          className="object-cover blur-md"
+          className="object-cover blur-lg"
         />
       )}
       <div className="absolute inset-0 bg-black/50" />
