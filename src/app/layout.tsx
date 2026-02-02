@@ -79,7 +79,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           alt={portalBg.description}
           data-ai-hint={portalBg.imageHint}
           fill
-          className="object-cover blur-sm -z-10"
+          className="object-cover blur-md -z-10"
         />
       )}
       <div className="absolute inset-0 bg-black/50 -z-10" />
