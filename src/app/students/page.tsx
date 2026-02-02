@@ -197,7 +197,7 @@ export default function StudentsPage() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                         <AlertDialogDescription>
                                             This action cannot be undone. This will permanently delete the student record for {student.firstName} {student.lastName}. The student's login may remain but will not be associated with any records.
                                         </AlertDialogDescription>

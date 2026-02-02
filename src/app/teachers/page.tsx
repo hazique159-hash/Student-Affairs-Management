@@ -165,7 +165,7 @@ export default function TeachersPage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                   <AlertDialogHeader>
-                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                       <AlertDialogDescription>
                                           This action cannot be undone. This will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}. The teacher's login account will not be deleted.
                                       </AlertDialogDescription>
