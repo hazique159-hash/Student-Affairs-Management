@@ -106,13 +106,18 @@
           "type": "string",
           "description": "Teacher's email address.",
           "format": "email"
+        },
+        "department": {
+          "type": "string",
+          "description": "Teacher's department (e.g., CS, SE, BBA)."
         }
       },
       "required": [
         "id",
         "firstName",
         "lastName",
-        "email"
+        "email",
+        "department"
       ]
     },
     "CounselingSession": {

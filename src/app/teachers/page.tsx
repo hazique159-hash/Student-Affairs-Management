@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import type { Teacher } from '@/lib/types';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
@@ -127,6 +128,7 @@ export default function TeachersPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Department</TableHead>
                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -140,6 +142,9 @@ export default function TeachersPage() {
                     <TableCell>
                       <Skeleton className="h-5 w-40" />
                     </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-16" />
+                    </TableCell>
                     {isAdmin && (
                         <TableCell className="text-right">
                             <Skeleton className="h-8 w-32 ml-auto" />
@@ -152,6 +157,26 @@ export default function TeachersPage() {
                   <TableRow key={teacher.id}>
                     <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
                     <TableCell>{teacher.email}</TableCell>
+                    <TableCell>
+                        <Badge
+                          variant={
+                            teacher.department === 'CS'
+                              ? 'default'
+                              : teacher.department === 'SE'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className={
+                            teacher.department === 'CS'
+                              ? 'bg-blue-100 text-blue-800'
+                              : teacher.department === 'SE'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-green-100 text-green-800'
+                          }
+                        >
+                          {teacher.department}
+                        </Badge>
+                      </TableCell>
                     {isAdmin && (
                         <TableCell className="text-right space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
@@ -185,7 +210,7 @@ export default function TeachersPage() {
                 ))}
                 {!isLoading && filteredTeachers?.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={isAdmin ? 3 : 2} className="h-24 text-center">
+                        <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center">
                         No teachers found.
                         </TableCell>
                     </TableRow>

@@ -22,6 +22,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import {
@@ -36,6 +43,9 @@ const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
+  department: z.enum(['CS', 'SE', 'BBA'], {
+    required_error: 'Please select a department.',
+  }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
@@ -51,6 +61,7 @@ export default function AddTeacherPage() {
       firstName: '',
       lastName: '',
       email: '',
+      department: undefined,
       password: '',
     },
   });
@@ -84,6 +95,7 @@ export default function AddTeacherPage() {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
+          department: values.department,
         });
 
         toast({
@@ -166,6 +178,28 @@ export default function AddTeacherPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CS">Computer Science (CS)</SelectItem>
+                          <SelectItem value="SE">Software Engineering (SE)</SelectItem>
+                          <SelectItem value="BBA">Business Administration (BBA)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField
                 control={form.control}
                 name="password"

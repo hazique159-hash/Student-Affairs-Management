@@ -36,6 +36,7 @@ export type Teacher = {
   firstName: string;
   lastName: string;
   email: string;
+  department: 'CS' | 'SE' | 'BBA';
 };
 
 export type Fine = {

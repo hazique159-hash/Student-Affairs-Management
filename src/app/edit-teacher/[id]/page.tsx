@@ -22,6 +22,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -33,6 +40,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
+  department: z.enum(['CS', 'SE', 'BBA'], {
+    required_error: 'Please select a department.',
+  }),
 });
 
 export default function EditTeacherPage() {
@@ -56,6 +66,7 @@ export default function EditTeacherPage() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      department: undefined,
     },
   });
   
@@ -75,6 +86,7 @@ export default function EditTeacherPage() {
       form.reset({
         firstName: teacher.firstName,
         lastName: teacher.lastName,
+        department: teacher.department,
       });
     }
   }, [teacher, form]);
@@ -191,6 +203,28 @@ export default function EditTeacherPage() {
                   )}
                 />
               </div>
+              <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="CS">Computer Science (CS)</SelectItem>
+                          <SelectItem value="SE">Software Engineering (SE)</SelectItem>
+                          <SelectItem value="BBA">Business Administration (BBA)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
             <CardFooter className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>
