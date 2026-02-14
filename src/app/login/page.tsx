@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -26,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { ShieldQuestion, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formSchema = z.object({
@@ -78,6 +79,43 @@ export default function LoginPage() {
     },
   });
 
+  async function handleResetPassword() {
+    const email = form.getValues('email');
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Email Required',
+        description: 'Please enter your email address in the field above to reset your password.',
+      });
+      return;
+    }
+
+    setLoading(true);
+    let emailToReset = email;
+    // Simple check to see if it's a student registration number
+    if (!email.includes('@')) {
+      emailToReset = `${email}@student.com`;
+    }
+
+    try {
+      if (!auth) throw new Error('Auth service not available');
+      await sendPasswordResetEmail(auth, emailToReset);
+      toast({
+        title: 'Reset Email Sent',
+        description: `A password reset link has been sent to ${emailToReset}. Please check your inbox.`,
+      });
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Reset Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     let emailToLogin = values.email;
@@ -90,7 +128,7 @@ export default function LoginPage() {
       if (!auth) throw new Error('Auth service not available');
       await signInWithEmailAndPassword(auth, emailToLogin, values.password);
 
-      const isAdmin = emailToLogin.endsWith('@admin.com');
+      const isAdmin = emailToLogin === 'studentaffairs316@gmail.com' || emailToLogin.endsWith('@admin.com');
 
       let role = 'User';
        if (isAdmin) {
@@ -187,12 +225,21 @@ export default function LoginPage() {
                     )}
                   />
                 </CardContent>
-                <CardFooter className="flex flex-col">
+                <CardFooter className="flex flex-col gap-2">
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     Sign In
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm font-normal text-muted-foreground hover:text-primary"
+                    onClick={handleResetPassword}
+                    disabled={loading}
+                  >
+                    Reset Admin Password
                   </Button>
                 </CardFooter>
               </form>
