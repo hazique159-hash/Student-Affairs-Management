@@ -83,7 +83,7 @@ export default function AnnouncementsPage() {
   const { data: announcements, isLoading } =
     useCollection<Announcement>(announcementsRef);
 
-  const isAdmin = user?.email?.endsWith('@admin.com');
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
   const form = useForm<z.infer<typeof announcementSchema>>({
     resolver: zodResolver(announcementSchema),

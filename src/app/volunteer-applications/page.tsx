@@ -45,7 +45,7 @@ export default function VolunteerApplicationsPage() {
 
   const isLoading = isUserLoading || isLoadingApplications;
 
-  const isAdmin = user?.email?.endsWith('@admin.com');
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
   
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {

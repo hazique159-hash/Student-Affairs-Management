@@ -69,7 +69,7 @@ export default function EditTeacherPage() {
   const params = useParams();
   const teacherId = params.id as string;
   
-  const isAdmin = user?.email?.endsWith('@admin.com');
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
   const teacherRef = useMemoFirebase(
     () => (firestore && teacherId && isAdmin ? doc(firestore, 'teachers', teacherId) : null),

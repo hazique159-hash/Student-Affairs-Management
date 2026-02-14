@@ -102,7 +102,7 @@ export default function CounselingPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const isAdmin = user?.email?.endsWith('@admin.com');
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
