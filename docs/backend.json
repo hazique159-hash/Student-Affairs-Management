@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Student": {
@@ -34,6 +35,11 @@
         "parentPhoneNumber": {
           "type": "string",
           "description": "Parent's phone number for SMS and WhatsApp notifications."
+        },
+        "recoveryEmail": {
+          "type": "string",
+          "description": "Personal email address for password recovery.",
+          "format": "email"
         },
         "complaintCount": {
           "type": "number",

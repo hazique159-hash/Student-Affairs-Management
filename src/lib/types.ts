@@ -1,3 +1,4 @@
+
 export type Department =
   | 'Computer Science'
   | 'Software Engineering'
@@ -24,6 +25,7 @@ export type Student = {
   phone: string;
   parentEmail: string;
   parentPhone: string;
+  recoveryEmail?: string;
   complaintCount?: number;
 };
 

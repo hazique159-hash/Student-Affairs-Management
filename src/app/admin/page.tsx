@@ -1,5 +1,6 @@
+
 'use client';
-import { Shield, UserPlus, Loader2, KeyRound, Mail } from 'lucide-react';
+import { Shield, Loader2, KeyRound, UserRoundPen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,13 +22,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import {
   updatePassword,
-  sendPasswordResetEmail,
 } from 'firebase/auth';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -37,18 +39,19 @@ const updatePasswordSchema = z.object({
     .min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-const resetPasswordSchema = z.object({
+const saveEmailSchema = z.object({
+  userId: z.string().min(1, { message: 'Please enter a Student ID or Teacher UID.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
 export default function AdminPage() {
-  const { auth, user, isUserLoading } = useFirebase();
+  const { auth, user, firestore, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const [loadingPassword, setLoadingPassword] = useState(false);
-  const [loadingReset, setLoadingReset] = useState(false);
+  const [loadingSaveEmail, setLoadingSaveEmail] = useState(false);
   const router = useRouter();
 
-  const isAdmin = user?.email?.endsWith('@admin.com');
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
@@ -68,9 +71,10 @@ export default function AdminPage() {
     },
   });
 
-  const resetForm = useForm<z.infer<typeof resetPasswordSchema>>({
-    resolver: zodResolver(resetPasswordSchema),
+  const saveEmailForm = useForm<z.infer<typeof saveEmailSchema>>({
+    resolver: zodResolver(saveEmailSchema),
     defaultValues: {
+      userId: '',
       email: '',
     },
   });
@@ -105,24 +109,56 @@ export default function AdminPage() {
     }
   };
 
-  const onResetSubmit = async (values: z.infer<typeof resetPasswordSchema>) => {
-    if (!auth) return;
-    setLoadingReset(true);
+  const onSaveEmailSubmit = async (values: z.infer<typeof saveEmailSchema>) => {
+    if (!firestore) return;
+    setLoadingSaveEmail(true);
     try {
-      await sendPasswordResetEmail(auth, values.email);
+      // Try finding in students collection first (using ID as registrationNumber)
+      const studentRef = doc(firestore, 'students', values.userId);
+      const studentSnap = await getDoc(studentRef);
+
+      if (studentSnap.exists()) {
+        await updateDoc(studentRef, {
+          recoveryEmail: values.email,
+        });
+        toast({
+          title: 'Email Saved',
+          description: `Recovery email for student ${values.userId} has been updated.`,
+        });
+        saveEmailForm.reset();
+        return;
+      }
+
+      // If not a student, try teachers collection
+      const teacherRef = doc(firestore, 'teachers', values.userId);
+      const teacherSnap = await getDoc(teacherRef);
+
+      if (teacherSnap.exists()) {
+        await updateDoc(teacherRef, {
+          email: values.email,
+        });
+        toast({
+          title: 'Email Saved',
+          description: `Contact email for teacher ${values.userId} has been updated.`,
+        });
+        saveEmailForm.reset();
+        return;
+      }
+
       toast({
-        title: 'Reset Email Sent',
-        description: `A password reset link has been sent to ${values.email}.`,
+        variant: 'destructive',
+        title: 'User Not Found',
+        description: `Could not find a student or teacher with ID: ${values.userId}`,
       });
-      resetForm.reset();
+
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Failed to Send Reset Email',
+        title: 'Failed to Save Email',
         description: error.message || 'An unexpected error occurred.',
       });
     } finally {
-      setLoadingReset(false);
+      setLoadingSaveEmail(false);
     }
   };
 
@@ -178,23 +214,39 @@ export default function AdminPage() {
         </Card>
 
         <Card>
-          <Form {...resetForm}>
-            <form onSubmit={resetForm.handleSubmit(onResetSubmit)}>
+          <Form {...saveEmailForm}>
+            <form onSubmit={saveEmailForm.handleSubmit(onSaveEmailSubmit)}>
               <CardHeader>
-                <CardTitle>Send Password Reset Link</CardTitle>
+                <CardTitle>Save Recovery Email</CardTitle>
                 <CardDescription>
-                  Trigger a password reset email for any registered user (Student or Teacher).
+                  Store an email address for a user to be used for future password recovery.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
                 <FormField
-                  control={resetForm.control}
+                  control={saveEmailForm.control}
+                  name="userId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>User ID / Registration No.</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. BCS223089" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the Student Registration Number or Teacher UID.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={saveEmailForm.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>User Email Address</FormLabel>
+                      <FormLabel>Recovery Email Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="user@example.com" {...field} />
+                        <Input placeholder="user@personal-email.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -202,13 +254,13 @@ export default function AdminPage() {
                 />
               </CardContent>
               <CardFooter className="flex justify-end">
-                <Button type="submit" variant="outline" disabled={loadingReset}>
-                  {loadingReset ? (
+                <Button type="submit" variant="outline" disabled={loadingSaveEmail}>
+                  {loadingSaveEmail ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Mail className="mr-2 h-4 w-4" />
+                    <UserRoundPen className="mr-2 h-4 w-4" />
                   )}
-                  Send Reset Link
+                  Save Email Address
                 </Button>
               </CardFooter>
             </form>
