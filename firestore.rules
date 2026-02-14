@@ -21,10 +21,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
-    // Admin Roles: A user can check their own admin status. Only admins can manage other admins.
+    // Admin Roles: Public read allowed to support the recovery email lookup on the forgot password page.
+    // Existence of a document for a given UID grants admin privileges.
     match /roles_admin/{adminId} {
-      allow get: if isOwner(adminId);
-      allow list, create, update, delete: if isAdmin();
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // Teachers Collection: Admins manage teachers. Teachers can read their own profile.
