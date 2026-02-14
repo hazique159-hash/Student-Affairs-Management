@@ -1,6 +1,5 @@
-
 'use client';
-import { Shield, Loader2, KeyRound, UserRoundPen } from 'lucide-react';
+import { Shield, Loader2, KeyRound, UserRoundPen, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -24,13 +23,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import {
   updatePassword,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Admin } from '@/lib/types';
 
 const updatePasswordSchema = z.object({
   newPassword: z
@@ -50,6 +50,12 @@ export default function AdminPage() {
   const router = useRouter();
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
+
+  const adminRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'roles_admin', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: adminData, isLoading: isDocLoading } = useDoc<Admin>(adminRef);
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
@@ -75,6 +81,14 @@ export default function AdminPage() {
       email: '',
     },
   });
+
+  useEffect(() => {
+    if (adminData?.recoveryEmail) {
+      saveEmailForm.reset({
+        email: adminData.recoveryEmail,
+      });
+    }
+  }, [adminData, saveEmailForm]);
 
   const onPasswordSubmit = async (values: z.infer<typeof updatePasswordSchema>) => {
     setLoadingPassword(true);
@@ -110,7 +124,6 @@ export default function AdminPage() {
     if (!firestore || !user) return;
     setLoadingSaveEmail(true);
     try {
-      // Update the admin's own document in roles_admin
       const adminRef = doc(firestore, 'roles_admin', user.uid);
       await setDoc(adminRef, {
         recoveryEmail: values.email,
@@ -122,7 +135,6 @@ export default function AdminPage() {
         title: 'Email Saved',
         description: 'Your recovery email address has been updated.',
       });
-      saveEmailForm.reset();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -208,9 +220,15 @@ export default function AdminPage() {
                     </FormItem>
                   )}
                 />
+                {adminData?.recoveryEmail && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                    <Mail className="h-4 w-4" />
+                    <span>Currently saved: <strong>{adminData.recoveryEmail}</strong></span>
+                  </div>
+                )}
               </CardContent>
               <CardFooter className="flex justify-end">
-                <Button type="submit" variant="outline" disabled={loadingSaveEmail}>
+                <Button type="submit" variant="outline" disabled={loadingSaveEmail || isDocLoading}>
                   {loadingSaveEmail ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
