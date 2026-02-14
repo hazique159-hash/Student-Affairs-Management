@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { ShieldQuestion, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formSchema = z.object({
@@ -49,7 +50,6 @@ export default function LoginPage() {
   const loginBg = PlaceHolderImages.find((p) => p.id === 'login-background');
 
   useEffect(() => {
-    // This function will run on the client side to set up the initial admin user.
     const setupAdmin = async () => {
       try {
         await fetch('/api/setup-admin', {
@@ -58,8 +58,8 @@ export default function LoginPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: 'admin@admin.com',
-            password: 'admin123',
+            email: 'studentaffairs316@gmail.com',
+            password: 'admin1234',
           }),
         });
       } catch (error) {
@@ -79,47 +79,9 @@ export default function LoginPage() {
     },
   });
 
-  async function handleResetPassword() {
-    const email = form.getValues('email');
-    if (!email) {
-      toast({
-        variant: 'destructive',
-        title: 'Email Required',
-        description: 'Please enter your email address in the field above to reset your password.',
-      });
-      return;
-    }
-
-    setLoading(true);
-    let emailToReset = email;
-    // Simple check to see if it's a student registration number
-    if (!email.includes('@')) {
-      emailToReset = `${email}@student.com`;
-    }
-
-    try {
-      if (!auth) throw new Error('Auth service not available');
-      await sendPasswordResetEmail(auth, emailToReset);
-      toast({
-        title: 'Reset Email Sent',
-        description: `A password reset link has been sent to ${emailToReset}. Please check your inbox.`,
-      });
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Reset Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     let emailToLogin = values.email;
-    // Simple check to see if it's a student registration number
     if (!values.email.includes('@')) {
       emailToLogin = `${values.email}@student.com`;
     }
@@ -152,10 +114,14 @@ export default function LoginPage() {
 
     } catch (error: any) {
       console.error(error);
+      const errorMessage = error.code === 'auth/invalid-credential' 
+        ? 'Invalid email or password. Please try again.' 
+        : error.message || 'An unexpected error occurred.';
+      
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -232,15 +198,12 @@ export default function LoginPage() {
                     )}
                     Sign In
                   </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="w-full text-sm font-normal text-muted-foreground hover:text-primary"
-                    onClick={handleResetPassword}
-                    disabled={loading}
+                  <Link 
+                    href="/forgot-password" 
+                    className="w-full text-center text-sm font-normal text-muted-foreground hover:text-primary transition-colors mt-2"
                   >
                     Reset Admin Password
-                  </Button>
+                  </Link>
                 </CardFooter>
               </form>
             </Form>
