@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -80,13 +81,14 @@ export function AppNav() {
   const { user } = useUser();
   
   const getRole = () => {
-    if (user?.email?.endsWith('@admin.com')) {
+    const email = user?.email || '';
+    if (email === 'studentaffairs316@gmail.com' || email.endsWith('@admin.com')) {
       return 'admin';
     }
-    if (user?.email?.endsWith('@student.com')) {
+    if (email.endsWith('@student.com')) {
       return 'student';
     }
-    if (user?.email) {
+    if (email) {
       return 'teacher';
     }
     return 'student'; // Default to student if no email

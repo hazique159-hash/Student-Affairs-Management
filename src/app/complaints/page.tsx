@@ -1,3 +1,4 @@
+
 'use client';
 import { ShieldQuestion, Loader2, Trash2 } from 'lucide-react';
 import {
@@ -56,25 +57,25 @@ export default function ComplaintsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingComplaint, setViewingComplaint] = useState<Complaint | null>(null);
 
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
+
   const complaintsRef = useMemoFirebase(
     () =>
-      firestore
+      firestore && isAdmin
         ? query(collection(firestore, 'complaints'), orderBy('dateSubmitted', 'desc'))
         : null,
-    [firestore]
+    [firestore, isAdmin]
   );
   const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
 
   const studentsRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'students') : null),
-    [firestore]
+    () => (firestore && isAdmin ? collection(firestore, 'students') : null),
+    [firestore, isAdmin]
   );
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
 
   const isLoading = isUserLoading || isLoadingComplaints || isLoadingStudents;
 
-  const isAdmin = user?.email?.endsWith('@admin.com');
-  
   const studentComplaintCounts = useMemo(() => {
     if (!students) return {};
     return students.reduce((acc, student) => {
@@ -128,10 +129,6 @@ export default function ComplaintsPage() {
             } else if (newStatus === 'Resolved' && complaint.status === 'Approved') {
                 // If resolving an approved complaint, update the student's copy
                 batch.update(studentComplaintRef, { status: newStatus });
-            }
-        } else {
-            if (newStatus !== 'Rejected') {
-              console.warn(`Could not find user account for student ID: ${complaint.studentId}. Complaint will not be visible to student.`);
             }
         }
         

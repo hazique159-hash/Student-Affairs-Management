@@ -14,11 +14,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
+        request.auth.token.email == "studentaffairs316@gmail.com" ||
+        request.auth.token.email.endsWith("@admin.com")
+      );
     }
 
     function isTeacher() {
-      return exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
     // Admin Roles: Public read allowed to support the recovery email lookup on the forgot password page.

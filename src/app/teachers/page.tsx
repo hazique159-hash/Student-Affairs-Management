@@ -1,3 +1,4 @@
+
 'use client';
 import { Briefcase, Plus, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,14 +41,15 @@ export default function TeachersPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
+
   const teachersRef = useMemoFirebase(
-    () => (firestore && user?.email?.endsWith('@admin.com') ? collection(firestore, 'teachers') : null),
-    [firestore, user]
+    () => (firestore && isAdmin ? collection(firestore, 'teachers') : null),
+    [firestore, isAdmin]
   );
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection<Teacher>(teachersRef);
   
   const isLoading = isUserLoading || isLoadingTeachers;
-  const isAdmin = user?.email?.endsWith('@admin.com');
 
   const filteredTeachers = teachers?.filter(
     (teacher) =>
