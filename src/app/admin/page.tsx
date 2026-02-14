@@ -27,10 +27,12 @@ import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import {
   updatePassword,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, FirestoreError } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Admin } from '@/lib/types';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const updatePasswordSchema = z.object({
   newPassword: z
@@ -125,22 +127,39 @@ export default function AdminPage() {
     setLoadingSaveEmail(true);
     try {
       const adminRef = doc(firestore, 'roles_admin', user.uid);
-      await setDoc(adminRef, {
+      const dataToSave = {
         recoveryEmail: values.email,
         email: user.email,
         id: user.uid,
-      }, { merge: true });
+      };
+
+      try {
+        await setDoc(adminRef, dataToSave, { merge: true });
+      } catch (error: any) {
+        if (error.code === 'permission-denied' || (error as FirestoreError).code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'update',
+            path: adminRef.path,
+            requestResourceData: dataToSave,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+          throw contextualError;
+        }
+        throw error;
+      }
 
       toast({
         title: 'Email Saved',
         description: 'Your recovery email address has been updated.',
       });
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to Save Email',
-        description: error.message || 'An unexpected error occurred.',
-      });
+      if (!(error instanceof FirestorePermissionError)) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to Save Email',
+          description: error.message || 'An unexpected error occurred.',
+        });
+      }
     } finally {
       setLoadingSaveEmail(false);
     }

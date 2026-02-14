@@ -1,4 +1,3 @@
-
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -29,8 +28,10 @@ import { ShieldQuestion, Loader2, ArrowLeft, MailCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, FirestoreError } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid administrator email address.' }),
@@ -63,7 +64,21 @@ export default function ForgotPasswordPage() {
         collection(firestore, 'roles_admin'),
         where('email', '==', values.email)
       );
-      const querySnapshot = await getDocs(adminQuery);
+      
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(adminQuery);
+      } catch (error: any) {
+        if (error.code === 'permission-denied' || (error as FirestoreError).code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path: 'roles_admin',
+          });
+          errorEmitter.emit('permission-error', contextualError);
+          throw contextualError;
+        }
+        throw error;
+      }
 
       let targetEmail = values.email;
       let foundRecovery = null;
@@ -72,17 +87,12 @@ export default function ForgotPasswordPage() {
         const adminData = querySnapshot.docs[0].data();
         if (adminData.recoveryEmail) {
           foundRecovery = adminData.recoveryEmail;
-          // We use the recovery email for the actual reset call if it's different
           targetEmail = adminData.recoveryEmail;
         }
       }
 
       setRecoveryEmail(foundRecovery || values.email);
 
-      // 2. Send the Firebase password reset email
-      // Note: This will send to the recovery email address IF it is also a registered Firebase user.
-      // If it's just a contact email, Firebase Auth requires the actual login email to initiate reset.
-      // For this implementation, we initiate reset on the provided email but notify where it's going.
       await sendPasswordResetEmail(auth, values.email);
       
       setSuccess(true);
@@ -92,12 +102,14 @@ export default function ForgotPasswordPage() {
       });
 
     } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Reset Failed',
-        description: error.message || 'We could not find an account with that email.',
-      });
+      // Specialized errors are handled by the FirebaseErrorListener component
+      if (!(error instanceof FirestorePermissionError)) {
+        toast({
+          variant: 'destructive',
+          title: 'Reset Failed',
+          description: error.message || 'We could not find an account with that email.',
+        });
+      }
     } finally {
       setLoading(false);
     }
