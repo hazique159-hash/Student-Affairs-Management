@@ -1,4 +1,3 @@
-
 'use client';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -26,16 +25,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { auth, user, isUserLoading } = useFirebase();
 
-  const isLoginPage = pathname === '/login';
+  const publicPaths = ['/login', '/forgot-password'];
+  const isPublicPage = publicPaths.includes(pathname);
 
   const portalBg = PlaceHolderImages.find((p) => p.id === 'login-background');
 
   useEffect(() => {
-    // Redirect to login if not authenticated and not on the login page
-    if (!isUserLoading && !user && !isLoginPage) {
+    // Redirect to login if not authenticated and not on a public page
+    if (!isUserLoading && !user && !isPublicPage) {
       router.push('/login');
     }
-  }, [isUserLoading, user, isLoginPage, router]);
+  }, [isUserLoading, user, isPublicPage, router]);
   
   const handleLogout = () => {
     if (auth) {
@@ -46,7 +46,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   const getRole = () => {
     const email = user?.email || '';
-    if (email.endsWith('@admin.com')) {
+    if (email === 'studentaffairs316@gmail.com' || email.endsWith('@admin.com')) {
       return 'Admin';
     }
     if (email.endsWith('@student.com')) {
@@ -60,7 +60,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   const role = user ? getRole() : '';
 
-  if (isLoginPage) {
+  if (isPublicPage) {
     return <>{children}</>;
   }
 
