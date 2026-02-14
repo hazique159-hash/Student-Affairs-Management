@@ -116,6 +116,11 @@
         "department": {
           "type": "string",
           "description": "Teacher's department (e.g., CS, SE, BBA)."
+        },
+        "recoveryEmail": {
+          "type": "string",
+          "description": "Personal email address for password recovery.",
+          "format": "email"
         }
       },
       "required": [
@@ -235,6 +240,11 @@
         "email": {
           "type": "string",
           "description": "Admin's email address.",
+          "format": "email"
+        },
+        "recoveryEmail": {
+          "type": "string",
+          "description": "Personal email address for password recovery.",
           "format": "email"
         }
       },

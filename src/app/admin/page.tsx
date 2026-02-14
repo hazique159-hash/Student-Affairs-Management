@@ -22,14 +22,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import {
   updatePassword,
 } from 'firebase/auth';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -40,7 +39,6 @@ const updatePasswordSchema = z.object({
 });
 
 const saveEmailSchema = z.object({
-  userId: z.string().min(1, { message: 'Please enter a Student ID or Teacher UID.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
@@ -74,7 +72,6 @@ export default function AdminPage() {
   const saveEmailForm = useForm<z.infer<typeof saveEmailSchema>>({
     resolver: zodResolver(saveEmailSchema),
     defaultValues: {
-      userId: '',
       email: '',
     },
   });
@@ -110,47 +107,22 @@ export default function AdminPage() {
   };
 
   const onSaveEmailSubmit = async (values: z.infer<typeof saveEmailSchema>) => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     setLoadingSaveEmail(true);
     try {
-      // Try finding in students collection first (using ID as registrationNumber)
-      const studentRef = doc(firestore, 'students', values.userId);
-      const studentSnap = await getDoc(studentRef);
-
-      if (studentSnap.exists()) {
-        await updateDoc(studentRef, {
-          recoveryEmail: values.email,
-        });
-        toast({
-          title: 'Email Saved',
-          description: `Recovery email for student ${values.userId} has been updated.`,
-        });
-        saveEmailForm.reset();
-        return;
-      }
-
-      // If not a student, try teachers collection
-      const teacherRef = doc(firestore, 'teachers', values.userId);
-      const teacherSnap = await getDoc(teacherRef);
-
-      if (teacherSnap.exists()) {
-        await updateDoc(teacherRef, {
-          email: values.email,
-        });
-        toast({
-          title: 'Email Saved',
-          description: `Contact email for teacher ${values.userId} has been updated.`,
-        });
-        saveEmailForm.reset();
-        return;
-      }
+      // Update the admin's own document in roles_admin
+      const adminRef = doc(firestore, 'roles_admin', user.uid);
+      await setDoc(adminRef, {
+        recoveryEmail: values.email,
+        email: user.email,
+        id: user.uid,
+      }, { merge: true });
 
       toast({
-        variant: 'destructive',
-        title: 'User Not Found',
-        description: `Could not find a student or teacher with ID: ${values.userId}`,
+        title: 'Email Saved',
+        description: 'Your recovery email address has been updated.',
       });
-
+      saveEmailForm.reset();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -171,7 +143,7 @@ export default function AdminPage() {
       <PageHeader
         title="Admin Panel"
         icon={Shield}
-        description="Manage application settings and users."
+        description="Manage your account settings and recovery options."
       />
 
       <div className="grid gap-8 max-w-2xl mx-auto">
@@ -179,9 +151,9 @@ export default function AdminPage() {
           <Form {...passwordForm}>
             <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
               <CardHeader>
-                <CardTitle>Update Admin Password</CardTitle>
+                <CardTitle>Update Password</CardTitle>
                 <CardDescription>
-                  Change the password for the current admin account.
+                  Change the password for your administrator account.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
@@ -217,28 +189,12 @@ export default function AdminPage() {
           <Form {...saveEmailForm}>
             <form onSubmit={saveEmailForm.handleSubmit(onSaveEmailSubmit)}>
               <CardHeader>
-                <CardTitle>Save Recovery Email</CardTitle>
+                <CardTitle>Recovery Email</CardTitle>
                 <CardDescription>
-                  Store an email address for a user to be used for future password recovery.
+                  Set an email address to be used for future password recovery.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <FormField
-                  control={saveEmailForm.control}
-                  name="userId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>User ID / Registration No.</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. BCS223089" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Enter the Student Registration Number or Teacher UID.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={saveEmailForm.control}
                   name="email"
@@ -246,7 +202,7 @@ export default function AdminPage() {
                     <FormItem>
                       <FormLabel>Recovery Email Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="user@personal-email.com" {...field} />
+                        <Input placeholder="admin.recovery@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -260,7 +216,7 @@ export default function AdminPage() {
                   ) : (
                     <UserRoundPen className="mr-2 h-4 w-4" />
                   )}
-                  Save Email Address
+                  Save Recovery Email
                 </Button>
               </CardFooter>
             </form>

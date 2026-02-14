@@ -1,3 +1,4 @@
+
 'use client';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -54,7 +55,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     if (email) {
       return 'Teacher';
     }
-    return 'Student'; // Default for safety, though should have email
+    return 'Student'; // Default for safety
   };
 
   const role = user ? getRole() : '';
@@ -109,7 +110,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-2 p-2">
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-sm font-medium truncate">
-                    {user.email || user.uid}
+                    {user.email || "Administrator"}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
                     {role === 'Admin' ? 'Supervisor' : role}
