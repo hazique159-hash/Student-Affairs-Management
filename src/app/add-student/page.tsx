@@ -60,7 +60,10 @@ const studentSchema = z.object({
   lastName: z.string().min(1, { message: 'Last name is required.' }),
   registrationNumber: z
     .string()
-    .min(1, { message: 'Registration number is required.' }),
+    .min(1, { message: 'Registration number is required.' })
+    .regex(/^[A-Z0-9]+$/, { 
+      message: 'Registration number must contain only capital letters and numbers (no special characters or spaces).' 
+    }),
   department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
@@ -203,6 +206,9 @@ export default function AddStudentPage() {
                     <FormControl>
                       <Input placeholder="BCS223089" {...field} />
                     </FormControl>
+                    <FormDescription>
+                      Only capital letters and numbers are allowed.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
