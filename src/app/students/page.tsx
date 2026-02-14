@@ -71,10 +71,6 @@ export default function StudentsPage() {
       });
       await Promise.all(deletePromises);
 
-      // Note: Deleting the Firebase Auth user is a privileged operation
-      // and cannot be safely done from the client-side without credentials.
-      // This implementation deletes the Firestore records only.
-
       toast({
         title: 'Student Deleted',
         description: `The record for ${studentToDelete.firstName} ${studentToDelete.lastName} has been deleted.`,
@@ -160,22 +156,7 @@ export default function StudentsPage() {
                       <TableCell className="font-medium">{student.id}</TableCell>
                       <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            student.department === 'CS'
-                              ? 'default'
-                              : student.department === 'SE'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                          className={
-                            student.department === 'CS'
-                              ? 'bg-blue-100 text-blue-800'
-                              : student.department === 'SE'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-green-100 text-green-800'
-                          }
-                        >
+                        <Badge variant="outline">
                           {student.department}
                         </Badge>
                       </TableCell>
@@ -199,7 +180,7 @@ export default function StudentsPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the student record for {student.firstName} {student.lastName}. The student's login may remain but will not be associated with any records.
+                                            This action cannot be undone. This will permanently delete the student record for {student.firstName} {student.lastName}.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

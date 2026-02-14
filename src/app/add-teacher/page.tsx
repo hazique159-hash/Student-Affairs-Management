@@ -39,11 +39,27 @@ import { doc, setDoc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 
+const DEPARTMENTS = [
+  'Computer Science',
+  'Software Engineering',
+  'Mathematics',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Management Sciences',
+  'Accounting & Finance',
+  'Psychology',
+  'English',
+  'Bioinformatics & Biosciences',
+  'Pharmacy',
+  'Law',
+] as const;
+
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  department: z.enum(['CS', 'SE', 'BBA'], {
+  department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
   password: z
@@ -191,9 +207,11 @@ export default function AddTeacherPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="CS">Computer Science (CS)</SelectItem>
-                          <SelectItem value="SE">Software Engineering (SE)</SelectItem>
-                          <SelectItem value="BBA">Business Administration (BBA)</SelectItem>
+                          {DEPARTMENTS.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

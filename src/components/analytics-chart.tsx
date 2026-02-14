@@ -9,6 +9,22 @@ import type { ChartConfig } from "@/components/ui/chart";
 import type { Student, Teacher, Complaint } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 
+const DEPARTMENTS = [
+  'Computer Science',
+  'Software Engineering',
+  'Mathematics',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Management Sciences',
+  'Accounting & Finance',
+  'Psychology',
+  'English',
+  'Bioinformatics & Biosciences',
+  'Pharmacy',
+  'Law',
+] as const;
+
 const chartConfig = {
   count: {
     label: "Count",
@@ -35,7 +51,7 @@ interface AnalyticsChartProps {
 }
 
 export function AnalyticsChart({ students, teachers, complaints, isLoading }: AnalyticsChartProps) {
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("CS");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("Computer Science");
 
   const chartData = useMemo(() => {
     if (isLoading) return [];
@@ -54,7 +70,7 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
 
     return [
       {
-        category: "Total Records",
+        category: selectedDepartment,
         students: deptStudents.length,
         teachers: deptTeachers.length,
         complaints: deptComplaints.length,
@@ -71,13 +87,15 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
             <CardDescription>Metrics comparison for the selected department.</CardDescription>
           </div>
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[280px]">
               <SelectValue placeholder="Select Department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="CS">Computer Science (CS)</SelectItem>
-              <SelectItem value="SE">Software Engineering (SE)</SelectItem>
-              <SelectItem value="BBA">Business Administration (BBA)</SelectItem>
+              {DEPARTMENTS.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -1,9 +1,24 @@
+export type Department =
+  | 'Computer Science'
+  | 'Software Engineering'
+  | 'Mathematics'
+  | 'Electrical Engineering'
+  | 'Mechanical Engineering'
+  | 'Civil Engineering'
+  | 'Management Sciences'
+  | 'Accounting & Finance'
+  | 'Psychology'
+  | 'English'
+  | 'Bioinformatics & Biosciences'
+  | 'Pharmacy'
+  | 'Law';
+
 export type Student = {
   id: string;
   registrationNumber: string;
   firstName: string;
   lastName: string;
-  department: 'CS' | 'SE' | 'BBA';
+  department: Department;
   name: string;
   email: string;
   phone: string;
@@ -36,7 +51,7 @@ export type Teacher = {
   firstName: string;
   lastName: string;
   email: string;
-  department: 'CS' | 'SE' | 'BBA';
+  department: Department;
 };
 
 export type Fine = {

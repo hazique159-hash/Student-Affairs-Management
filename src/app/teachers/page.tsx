@@ -73,8 +73,6 @@ export default function TeachersPage() {
 
     try {
       await deleteDoc(doc(firestore, 'teachers', teacher.id));
-      // Note: This only deletes the Firestore record. The Firebase Auth user
-      // is not deleted as it requires a privileged server environment.
       toast({
         title: 'Teacher Deleted',
         description: `The record for ${teacher.firstName} ${teacher.lastName} has been deleted.`,
@@ -158,22 +156,7 @@ export default function TeachersPage() {
                     <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
                     <TableCell>{teacher.email}</TableCell>
                     <TableCell>
-                        <Badge
-                          variant={
-                            teacher.department === 'CS'
-                              ? 'default'
-                              : teacher.department === 'SE'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                          className={
-                            teacher.department === 'CS'
-                              ? 'bg-blue-100 text-blue-800'
-                              : teacher.department === 'SE'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-green-100 text-green-800'
-                          }
-                        >
+                        <Badge variant="outline">
                           {teacher.department}
                         </Badge>
                       </TableCell>
@@ -192,7 +175,7 @@ export default function TeachersPage() {
                                   <AlertDialogHeader>
                                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                          This action cannot be undone. This will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}. The teacher's login account will not be deleted.
+                                          This action cannot be undone. This will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}.
                                       </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>

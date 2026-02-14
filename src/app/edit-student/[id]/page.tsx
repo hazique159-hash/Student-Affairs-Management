@@ -37,10 +37,26 @@ import { useEffect } from 'react';
 import type { Student } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const DEPARTMENTS = [
+  'Computer Science',
+  'Software Engineering',
+  'Mathematics',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Management Sciences',
+  'Accounting & Finance',
+  'Psychology',
+  'English',
+  'Bioinformatics & Biosciences',
+  'Pharmacy',
+  'Law',
+] as const;
+
 const studentSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
-  department: z.enum(['CS', 'SE', 'BBA'], {
+  department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
 });
@@ -72,7 +88,7 @@ export default function EditStudentPage() {
       form.reset({
         firstName: student.firstName,
         lastName: student.lastName,
-        department: student.department,
+        department: student.department as any,
       });
     }
   }, [student, form]);
@@ -200,9 +216,11 @@ export default function EditStudentPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="CS">Computer Science (CS)</SelectItem>
-                          <SelectItem value="SE">Software Engineering (SE)</SelectItem>
-                          <SelectItem value="BBA">Business Administration (BBA)</SelectItem>
+                          {DEPARTMENTS.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
