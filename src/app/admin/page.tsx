@@ -1,5 +1,5 @@
 'use client';
-import { Shield, UserPlus, Loader2, KeyRound } from 'lucide-react';
+import { Shield, UserPlus, Loader2, KeyRound, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,10 +25,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import {
-  createUserWithEmailAndPassword,
   updatePassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -38,10 +37,15 @@ const updatePasswordSchema = z.object({
     .min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+const resetPasswordSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+});
+
 export default function AdminPage() {
-  const { auth, firestore, user, isUserLoading } = useFirebase();
+  const { auth, user, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const [loadingPassword, setLoadingPassword] = useState(false);
+  const [loadingReset, setLoadingReset] = useState(false);
   const router = useRouter();
 
   const isAdmin = user?.email?.endsWith('@admin.com');
@@ -61,6 +65,13 @@ export default function AdminPage() {
     resolver: zodResolver(updatePasswordSchema),
     defaultValues: {
       newPassword: '',
+    },
+  });
+
+  const resetForm = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: '',
     },
   });
 
@@ -94,6 +105,27 @@ export default function AdminPage() {
     }
   };
 
+  const onResetSubmit = async (values: z.infer<typeof resetPasswordSchema>) => {
+    if (!auth) return;
+    setLoadingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, values.email);
+      toast({
+        title: 'Reset Email Sent',
+        description: `A password reset link has been sent to ${values.email}.`,
+      });
+      resetForm.reset();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Send Reset Email',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
+      setLoadingReset(false);
+    }
+  };
+
   if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
@@ -106,43 +138,83 @@ export default function AdminPage() {
         description="Manage application settings and users."
       />
 
-      <Card className="max-w-2xl mx-auto">
-        <Form {...passwordForm}>
-          <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
-            <CardHeader>
-              <CardTitle>Update Admin Password</CardTitle>
-              <CardDescription>
-                Change the password for the current admin account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6">
-              <FormField
-                control={passwordForm.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={loadingPassword}>
-                {loadingPassword ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <KeyRound className="mr-2 h-4 w-4" />
-                )}
-                Update Password
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+      <div className="grid gap-8 max-w-2xl mx-auto">
+        <Card>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
+              <CardHeader>
+                <CardTitle>Update Admin Password</CardTitle>
+                <CardDescription>
+                  Change the password for the current admin account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                <FormField
+                  control={passwordForm.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button type="submit" disabled={loadingPassword}>
+                  {loadingPassword ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <KeyRound className="mr-2 h-4 w-4" />
+                  )}
+                  Update Password
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+
+        <Card>
+          <Form {...resetForm}>
+            <form onSubmit={resetForm.handleSubmit(onResetSubmit)}>
+              <CardHeader>
+                <CardTitle>Send Password Reset Link</CardTitle>
+                <CardDescription>
+                  Trigger a password reset email for any registered user (Student or Teacher).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-6">
+                <FormField
+                  control={resetForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>User Email Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="user@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button type="submit" variant="outline" disabled={loadingReset}>
+                  {loadingReset ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Mail className="mr-2 h-4 w-4" />
+                  )}
+                  Send Reset Link
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+      </div>
     </div>
   );
 }
