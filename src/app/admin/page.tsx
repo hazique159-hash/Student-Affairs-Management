@@ -26,6 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import {
   updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from 'firebase/auth';
 import { doc, setDoc, FirestoreError } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
@@ -35,9 +37,10 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
 const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, { message: 'Current password is required.' }),
   newPassword: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+    .min(6, { message: 'New password must be at least 6 characters.' }),
 });
 
 const saveEmailSchema = z.object({
@@ -73,6 +76,7 @@ export default function AdminPage() {
   const passwordForm = useForm<z.infer<typeof updatePasswordSchema>>({
     resolver: zodResolver(updatePasswordSchema),
     defaultValues: {
+      currentPassword: '',
       newPassword: '',
     },
   });
@@ -94,7 +98,7 @@ export default function AdminPage() {
 
   const onPasswordSubmit = async (values: z.infer<typeof updatePasswordSchema>) => {
     setLoadingPassword(true);
-    if (!user) {
+    if (!user || !user.email) {
         toast({
             variant: 'destructive',
             title: 'Error',
@@ -105,17 +109,27 @@ export default function AdminPage() {
     }
     
     try {
+      // Re-authenticate first
+      const credential = EmailAuthProvider.credential(user.email, values.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Then update
       await updatePassword(user, values.newPassword);
+      
       toast({
         title: 'Password Updated',
         description: 'Your password has been successfully updated.',
       });
       passwordForm.reset();
     } catch (error: any) {
+      let message = error.message;
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        message = 'The current password you entered is incorrect.';
+      }
       toast({
         variant: 'destructive',
         title: 'Failed to Update Password',
-        description: error.message || 'An unexpected error occurred.',
+        description: message || 'An unexpected error occurred.',
       });
     } finally {
       setLoadingPassword(false);
@@ -190,12 +204,25 @@ export default function AdminPage() {
               <CardContent className="grid gap-6">
                 <FormField
                   control={passwordForm.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Enter current password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
                   name="newPassword"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>New Password</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" placeholder="Enter new password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
