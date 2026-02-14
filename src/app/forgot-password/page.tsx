@@ -1,3 +1,4 @@
+
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -56,13 +57,20 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: z.infer<typeof forgotPasswordSchema>) {
     setLoading(true);
+    let emailToReset = values.email;
+
+    // Alias admin@admin.com to the primary admin account for consistent password management
+    if (emailToReset === 'admin@admin.com') {
+      emailToReset = 'studentaffairs316@gmail.com';
+    }
+
     try {
       if (!auth || !firestore) throw new Error('Services not available');
 
       // 1. Look up the admin's recovery email in Firestore
       const adminQuery = query(
         collection(firestore, 'roles_admin'),
-        where('email', '==', values.email)
+        where('email', '==', emailToReset)
       );
       
       let querySnapshot;
@@ -80,29 +88,26 @@ export default function ForgotPasswordPage() {
         throw error;
       }
 
-      let targetEmail = values.email;
       let foundRecovery = null;
 
       if (!querySnapshot.empty) {
         const adminData = querySnapshot.docs[0].data();
         if (adminData.recoveryEmail) {
           foundRecovery = adminData.recoveryEmail;
-          targetEmail = adminData.recoveryEmail;
         }
       }
 
-      setRecoveryEmail(foundRecovery || values.email);
+      setRecoveryEmail(foundRecovery || emailToReset);
 
-      await sendPasswordResetEmail(auth, values.email);
+      await sendPasswordResetEmail(auth, emailToReset);
       
       setSuccess(true);
       toast({
         title: 'Reset Instructions Sent',
-        description: `Check your recovery inbox at ${foundRecovery || values.email}.`,
+        description: `Check your recovery inbox at ${foundRecovery || emailToReset}.`,
       });
 
     } catch (error: any) {
-      // Specialized errors are handled by the FirebaseErrorListener component
       if (!(error instanceof FirestorePermissionError)) {
         toast({
           variant: 'destructive',
@@ -150,13 +155,13 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A password reset link has been sent to your primary email address and your stored recovery email:
+                  A password reset link has been sent to the primary admin account and your stored recovery email:
                 </p>
                 <p className="text-sm font-semibold text-primary break-all">
                   {recoveryEmail}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Please check your spam folder if you don't see it within a few minutes.
+                  Please check your inbox (and spam folder) for instructions.
                 </p>
               </div>
             ) : (

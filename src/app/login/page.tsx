@@ -82,7 +82,11 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     let emailToLogin = values.email;
-    if (!values.email.includes('@')) {
+
+    // Alias admin@admin.com to the primary admin account
+    if (emailToLogin === 'admin@admin.com') {
+      emailToLogin = 'studentaffairs316@gmail.com';
+    } else if (!values.email.includes('@')) {
       emailToLogin = `${values.email}@student.com`;
     }
 
