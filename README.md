@@ -4,12 +4,22 @@ This is a modern Student Affairs Management portal built with Next.js and Fireba
 
 ## Technology Stack
 
-- **Frontend Framework:** Next.js 15 (App Router)
-- **Programming Language:** TypeScript
+### Frontend
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
 - **Styling:** Tailwind CSS
 - **UI Components:** ShadCN UI (Radix UI)
-- **Backend & Database:** Firebase (Firestore, Authentication)
-- **AI Framework:** Genkit
+- **Icons:** Lucide React
+- **Charts:** Recharts (via ShadCN)
+
+### Backend & Database
+- **Identity & Auth:** Firebase Authentication (with Admin Aliasing)
+- **Database:** Cloud Firestore (NoSQL Real-time Database)
+- **AI Framework:** Genkit (for Generative AI features)
+- **Server Logic:** Next.js Server Actions
+
+### Deployment
+- **Hosting:** Firebase App Hosting
 
 ## Key Features
 
