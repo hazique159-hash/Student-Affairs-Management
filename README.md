@@ -21,6 +21,15 @@ This is a modern Student Affairs Management portal built with Next.js and Fireba
 ### Deployment
 - **Hosting:** Firebase App Hosting
 
+## Database Structure (Who is Who?)
+
+The system uses specific Firestore collections to manage roles and data mapping:
+
+- **`roles_admin/{uid}`**: Stores administrator profiles. Existence of a UID here (or matching the primary admin email) grants full system access.
+- **`teachers/{uid}`**: Stores teacher profiles. Existence of a UID here grants teacher privileges (e.g., filing complaints, viewing student lists).
+- **`students/{registrationNumber}`**: The master directory of all enrolled students. Stores personal info and global metrics like `complaintCount`.
+- **`users/{uid}`**: A mapping collection. For students, it links their Firebase Auth UID to their `registrationNumber`. This allows the system to securely fetch student-specific subcollections like `/fines` or `/counselingSessions`.
+
 ## Key Features
 
 - **Admin Panel:** Manage student and teacher records, announcements, and system configuration.
