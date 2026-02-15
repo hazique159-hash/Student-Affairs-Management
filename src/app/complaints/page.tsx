@@ -1,4 +1,3 @@
-
 'use client';
 import { ShieldQuestion, Loader2, Trash2 } from 'lucide-react';
 import {
@@ -59,6 +58,7 @@ export default function ComplaintsPage() {
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
+  // Example: Ordered Query for real-time collection fetching
   const complaintsRef = useMemoFirebase(
     () =>
       firestore && isAdmin
@@ -111,7 +111,7 @@ export default function ComplaintsPage() {
             batch.update(studentRef, { complaintCount: increment(1) });
         }
         
-        // 4. Update student's personal copy of the complaint
+        // 4. Filtered Query to find student user account
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
@@ -120,14 +120,12 @@ export default function ComplaintsPage() {
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
 
             if (newStatus === 'Approved') {
-                // On first approval, set the whole document for the student
                 batch.set(studentComplaintRef, {
                     ...complaint,
                     status: newStatus,
                     dateSubmitted: complaint.dateSubmitted,
                 });
             } else if (newStatus === 'Resolved' && complaint.status === 'Approved') {
-                // If resolving an approved complaint, update the student's copy
                 batch.update(studentComplaintRef, { status: newStatus });
             }
         }
@@ -156,7 +154,6 @@ export default function ComplaintsPage() {
     try {
       const batch = writeBatch(firestore);
 
-      // Delete complaint from all relevant collections
       const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
       batch.delete(masterComplaintRef);
 
@@ -171,7 +168,6 @@ export default function ComplaintsPage() {
           batch.delete(studentComplaintRef);
       }
       
-      // If the deleted complaint had been approved, decrement the student's complaintCount
       if (complaint.status === 'Approved' || complaint.status === 'Resolved') {
           const studentRef = doc(firestore, 'students', complaint.studentId);
           batch.update(studentRef, { complaintCount: increment(-1) });
