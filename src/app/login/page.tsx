@@ -1,4 +1,3 @@
-
 'use client';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -206,7 +205,7 @@ export default function LoginPage() {
                     href="/forgot-password" 
                     className="w-full text-center text-sm font-normal text-muted-foreground hover:text-primary transition-colors mt-2"
                   >
-                    Reset Admin Password
+                    Reset Password
                   </Link>
                 </CardFooter>
               </form>
