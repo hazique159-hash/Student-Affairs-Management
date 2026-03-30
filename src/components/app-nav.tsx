@@ -10,9 +10,7 @@ import {
   Shield,
   Users,
   UserPlus,
-  CircleDollarSign,
   Briefcase,
-  Bell,
   MessageSquareHeart,
   PenSquare,
   MessageSquareWarning,
@@ -40,7 +38,6 @@ const baseNavItems = [
   { href: '/volunteer-applications', icon: ClipboardList, label: 'Volunteer Apps', roles: ['admin'] },
   
   // Student
-  { href: '/my-fines', icon: CircleDollarSign, label: 'My Fines', roles: ['student'] },
   { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student', 'teacher'] },
   { href: '/volunteer', icon: HandHeart, label: 'Volunteer', roles: ['student'] },
   
@@ -70,7 +67,6 @@ const teacherNavOrder = [
 
 const studentNavOrder = [
   '/announcements',
-  '/my-fines',
   '/my-complaints',
   '/volunteer',
   '/register-complaint'

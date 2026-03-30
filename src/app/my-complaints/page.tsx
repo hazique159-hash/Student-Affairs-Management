@@ -1,3 +1,4 @@
+
 'use client';
 import { MessageSquareHeart, Plus, Loader2, CircleDollarSign, Upload, X } from 'lucide-react';
 import {
@@ -23,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { collection, query, orderBy, doc, writeBatch, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -121,7 +122,7 @@ export default function MyComplaintsPage() {
             paymentReceiptUrl: receiptPreview
         });
 
-        // 3. Update filer's record
+        // 3. Update filer's record if it exists
         if (payingComplaint.filedById && payingComplaint.filedById !== 'system') {
             const filerComplaintRef = doc(firestore, `users/${payingComplaint.filedById}/complaints`, payingComplaint.id);
             batch.update(filerComplaintRef, { 
@@ -154,10 +155,10 @@ export default function MyComplaintsPage() {
   const isStudent = user?.email?.endsWith('@student.com');
   const isTeacher = user?.email && !user.email.endsWith('@student.com') && !user.email.endsWith('@admin.com');
 
-  const pageTitle = isStudent ? "Complaint Records" : "My Complaints";
+  const pageTitle = isStudent ? "Violation Portal" : "Complaint Center";
   const pageDescription = isStudent
-    ? "A record of all complaints filed against you."
-    : "A record of all complaints you have filed.";
+    ? "Review approved violations and settle outstanding fines."
+    : "Track the status of your submitted violation reports.";
 
   return (
     <div className="space-y-8">
@@ -176,9 +177,9 @@ export default function MyComplaintsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Complaint History</CardTitle>
+          <CardTitle>History</CardTitle>
           <CardDescription>
-            {isStudent ? "View details of complaints filed against you and settle fines." : "View the status of complaints you've submitted."}
+            {isStudent ? "Approved complaints require immediate fine settlement via Easypaisa." : "List of all complaints filed by you."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -188,7 +189,7 @@ export default function MyComplaintsPage() {
                 <TableHead>Date</TableHead>
                 {isStudent && <TableHead>Filed By</TableHead>}
                 {isTeacher && <TableHead>Student</TableHead>}
-                <TableHead>Violation Title</TableHead>
+                <TableHead>Title</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -238,7 +239,7 @@ export default function MyComplaintsPage() {
                          </Button>
                        ) : (
                          <span className="text-xs text-muted-foreground italic">
-                            {complaint.status === 'Resolved' ? 'Paid' : 'No action'}
+                            {complaint.status === 'Resolved' ? 'Paid' : 'No Action Required'}
                          </span>
                        )}
                     </TableCell>
@@ -247,7 +248,7 @@ export default function MyComplaintsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={isStudent || isTeacher ? 5 : 4} className="text-center h-24 text-muted-foreground">
-                    {isStudent ? "No complaints found against you." : "You have not filed any complaints."}
+                    No records found.
                   </TableCell>
                 </TableRow>
               )}
@@ -267,13 +268,13 @@ export default function MyComplaintsPage() {
           <DialogHeader>
             <DialogTitle>Fine Payment</DialogTitle>
             <DialogDescription>
-              Complete your payment via Easypaisa to resolve this complaint.
+              Submit your payment proof to resolve this violation record.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="bg-muted p-4 rounded-lg space-y-2 text-sm border">
                 <div className="flex justify-between">
-                    <span className="font-medium">Fine Amount:</span>
+                    <span className="font-medium">Total Fine:</span>
                     <span className="text-primary font-bold">Rs. 1000</span>
                 </div>
                 <div className="flex justify-between">
@@ -281,14 +282,14 @@ export default function MyComplaintsPage() {
                     <span className="truncate max-w-[200px]">{payingComplaint?.title}</span>
                 </div>
                 <div className="border-t pt-2 mt-2">
-                    <p className="font-bold text-center mb-1">Payment Details</p>
+                    <p className="font-bold text-center mb-1 text-xs uppercase tracking-wider text-muted-foreground">Payment Instructions</p>
                     <div className="flex justify-between">
                         <span>Method:</span>
-                        <span className="font-semibold">Easypaisa</span>
+                        <span className="font-semibold text-green-600">Easypaisa</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Account No:</span>
-                        <span className="font-semibold text-primary">03140500595</span>
+                        <span>Account Number:</span>
+                        <span className="font-bold text-primary">03140500595</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Account Name:</span>
@@ -305,9 +306,9 @@ export default function MyComplaintsPage() {
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground">
-                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                    <span className="font-semibold text-primary">Upload Receipt</span>
                                 </p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG or PDF (MAX. 500KB)</p>
+                                <p className="text-xs text-muted-foreground text-center px-4">Screenshot of Easypaisa transaction (Max 500KB)</p>
                             </div>
                             <input 
                                 id="receipt" 
