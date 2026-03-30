@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -58,7 +59,8 @@ import type { Announcement } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
-// Form schema for creating an announcement
+const MAX_IMAGE_SIZE = 500 * 1024; // 500KB limit for Firestore stability
+
 const announcementSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   content: z
@@ -124,11 +126,11 @@ export default function AnnouncementsPage() {
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > MAX_IMAGE_SIZE) {
         toast({
           variant: 'destructive',
           title: 'Image too large',
-          description: 'Please select an image smaller than 2MB.',
+          description: 'Please select an image smaller than 500KB to ensure system stability.',
         });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';

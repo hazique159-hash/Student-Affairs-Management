@@ -49,7 +49,7 @@ import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 500 * 1024; // 500KB limit for Firestore Base64 stability
 
 const complaintSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -114,7 +114,7 @@ export default function RegisterComplaintPage() {
       toast({
         variant: 'destructive',
         title: 'File too large',
-        description: 'Evidence must be smaller than 5MB.',
+        description: 'Evidence must be smaller than 500KB to ensure system stability.',
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
@@ -230,11 +230,9 @@ export default function RegisterComplaintPage() {
         evidenceUrl: values.evidenceUrl || null,
       };
 
-      // 1. Write to the global collection for admin/teacher review
       const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
       batch.set(topLevelComplaintRef, complaintData);
 
-      // 2. Write to the filer's own subcollection for their "My Complaints" history
       const userComplaintRef = doc(
         firestore,
         `users/${filedById}/complaints`,
@@ -242,7 +240,6 @@ export default function RegisterComplaintPage() {
       );
       batch.set(userComplaintRef, complaintData);
 
-      // 3. Write to the target student's portal for immediate visibility
       const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
       const studentUserSnapshot = await getDocs(studentUserQuery);
 
@@ -407,11 +404,10 @@ export default function RegisterComplaintPage() {
                 )}
               />
 
-              {/* Optional Evidence Section */}
               <div className="space-y-4">
                 <FormLabel>Evidence (Optional Proof)</FormLabel>
                 <FormDescription>
-                  Upload an image or video as proof for your complaint. Max size 5MB.
+                  Upload an image or video as proof for your complaint. Max size 500KB.
                 </FormDescription>
                 
                 {!evidencePreview ? (

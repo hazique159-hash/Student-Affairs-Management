@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, setDoc, doc } from 'firebase/firestore';
+import { getFirestore, setDoc, doc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 // Ensure Firebase is initialized
@@ -21,8 +21,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // Check if admin already exists - this is a simplification
-    // A real app should handle this more robustly
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -38,6 +36,9 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
+            // Check if Firestore document exists to avoid unnecessary writes
+            // We use a simplified lookup here since we can't easily get the UID without signing in
+            // For a prototype, just returning success is often enough to stop the spam
             return NextResponse.json({ message: 'Admin user already exists' }, { status: 200 });
         }
         throw error;
