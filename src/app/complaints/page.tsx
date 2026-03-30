@@ -1,4 +1,3 @@
-
 'use client';
 import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye, CheckCircle } from 'lucide-react';
 import {
@@ -320,7 +319,9 @@ export default function ComplaintsPage() {
                             {viewingComplaint.evidenceUrl.startsWith('data:video/') ? (
                                 <video src={viewingComplaint.evidenceUrl} controls className="w-full rounded border" />
                             ) : (
-                                <div className="relative aspect-video w-full"><Image src={viewingComplaint.evidenceUrl} alt="Evidence" fill className="object-contain" /></div>
+                                <div className="relative aspect-video w-full">
+                                    <img src={viewingComplaint.evidenceUrl} alt="Evidence" className="w-full h-full object-contain" />
+                                </div>
                             )}
                         </div>
                       )}
@@ -337,7 +338,7 @@ export default function ComplaintsPage() {
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader><DialogTitle>Payment Receipt</DialogTitle></DialogHeader>
                 <div className="relative aspect-[4/3] w-full bg-black rounded-lg overflow-hidden border">
-                    <Image src={viewingReceipt} alt="Payment Receipt" fill className="object-contain" />
+                    <img src={viewingReceipt} alt="Payment Receipt" className="w-full h-full object-contain" />
                 </div>
                 <DialogFooter><Button onClick={() => setViewingReceipt(null)}>Close</Button></DialogFooter>
             </DialogContent>
