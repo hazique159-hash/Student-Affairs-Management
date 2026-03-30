@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { collection, query, orderBy, doc, writeBatch, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,7 +64,7 @@ export default function MyComplaintsPage() {
         const masterRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterRef, { status: 'Resolved' });
 
-        // 3. Find teacher/filer to update their record too if it exists
+        // 3. Update filer's record if they are not system
         if (complaint.filedById && complaint.filedById !== 'system') {
             const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
             batch.update(filerComplaintRef, { status: 'Resolved' });
@@ -73,7 +73,7 @@ export default function MyComplaintsPage() {
         await batch.commit();
         toast({
             title: 'Fine Paid Successfully',
-            description: 'Rs. 1000 has been paid and the complaint is now resolved.',
+            description: 'The complaint has been marked as resolved.',
         });
     } catch (error: any) {
         toast({
@@ -114,7 +114,7 @@ export default function MyComplaintsPage() {
         <CardHeader>
           <CardTitle>Complaint History</CardTitle>
           <CardDescription>
-            {isStudent ? "View fines and details of complaints filed against you." : "View the status of complaints you've submitted."}
+            {isStudent ? "View details of complaints filed against you and settle fines." : "View the status of complaints you've submitted."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +175,7 @@ export default function MyComplaintsPage() {
                             ) : (
                                 <CircleDollarSign className="mr-2 h-4 w-4" />
                             )}
-                            Pay Fine (Rs. 1000)
+                            Pay Fine
                          </Button>
                        ) : (
                          <span className="text-xs text-muted-foreground italic">No action needed</span>
