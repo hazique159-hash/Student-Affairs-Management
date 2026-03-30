@@ -103,20 +103,20 @@ export default function AnalyticsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-destructive/10 border-destructive/20">
+        <Card className="bg-red-200 border-red-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">
+            <CardTitle className="text-sm font-medium text-black">
               Pending Complaints
             </CardTitle>
-            <Clock className="h-4 w-4 text-destructive" />
+            <Clock className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
             {isLoadingComplaints ? (
-              <Loader2 className="h-6 w-6 animate-spin text-destructive" />
+              <Loader2 className="h-6 w-6 animate-spin text-black" />
             ) : (
-              <div className="text-2xl font-bold text-destructive">{pendingComplaintsCount}</div>
+              <div className="text-2xl font-bold text-black">{pendingComplaintsCount}</div>
             )}
-            <p className="text-xs text-destructive/80">
+            <p className="text-xs text-black/70">
               Awaiting admin review.
             </p>
           </CardContent>
