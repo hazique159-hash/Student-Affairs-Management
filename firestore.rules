@@ -40,18 +40,19 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     
-    // Students Collection: Admins manage students. Teachers can read student data.
+    // Students Collection: Admins manage students. Teachers/Students can read specific records for verification.
     match /students/{studentId} {
       allow create: if isAdmin();
-      allow get: if isAdmin() || isTeacher();
+      allow get: if isSignedIn(); // Allow signed-in users to lookup student names/details for complaints/counseling
       allow list: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
-    // Users Collection: Links auth UIDs to student IDs.
+    // Users Collection: Links auth UIDs to student IDs. 
+    // Teachers need read access to map registration numbers to UIDs.
     match /users/{userId} {
       allow create: if isAdmin();
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin() || isTeacher();
     }
 
     // Announcements Collection: Publicly readable, admin-writable.
@@ -97,7 +98,7 @@ service cloud.firestore {
 
     match /users/{userId}/complaints/{complaintId} {
         allow read: if isOwner(userId) || isTeacher() || isAdmin();
-        // Admin can create a complaint in a student's subcollection upon approval
+        // Admin/Teachers can create a complaint in a student's subcollection for portal visibility
         allow create: if isOwner(userId) || isTeacher() || isAdmin();
         allow update: if isAdmin(); // Admin can update status
         allow delete: if isAdmin();
