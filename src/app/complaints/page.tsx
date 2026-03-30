@@ -134,9 +134,11 @@ export default function ComplaintsPage() {
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // 3. Update filer's history
-        const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-        batch.update(filerComplaintRef, { status: newStatus });
+        // 3. Update filer's history (if not self-filed)
+        if (complaint.filedById) {
+          const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+          batch.update(filerComplaintRef, { status: newStatus });
+        }
 
         // 4. Update student metrics and ISSUE FINE if approved
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
@@ -162,10 +164,16 @@ export default function ComplaintsPage() {
                     dateDue: dueDate.toISOString(),
                     isPaid: false
                 });
+            } else {
+              toast({
+                variant: 'destructive',
+                title: 'No Student Account',
+                description: `Could not issue fine because ${complaint.studentId} has not logged into the portal yet.`
+              });
             }
         }
         
-        // 5. Update student's portal portal copy
+        // 5. Update student's portal copy
         if (!studentUserSnapshot.empty) {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
@@ -201,8 +209,10 @@ export default function ComplaintsPage() {
       const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
       batch.delete(masterComplaintRef);
 
-      const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-      batch.delete(filerComplaintRef);
+      if (complaint.filedById) {
+        const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+        batch.delete(filerComplaintRef);
+      }
 
       const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
       const studentUserSnapshot = await getDocs(studentUserQuery);
@@ -348,9 +358,9 @@ export default function ComplaintsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Student</TableHead>
-                <TableHead>Complaint No.</TableHead>
+                <TableHead>Total Violations</TableHead>
                 <TableHead>Teacher</TableHead>
-                <TableHead>Violation</TableHead>
+                <TableHead>Violation Title</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -397,7 +407,7 @@ export default function ComplaintsPage() {
                                 <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
                                    Reject
                                 </Button>
-                            </>
+                            </<>
                           )}
                           {complaint.status === 'Approved' && isAdmin && (
                             <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Resolved')} disabled={updatingId === complaint.id}>

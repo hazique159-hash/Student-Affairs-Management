@@ -78,7 +78,7 @@ export default function MyFinesPage() {
       <PageHeader
         title="My Fines"
         icon={CircleDollarSign}
-        description="A record of all fines issued to you."
+        description="A record of all fines issued to you. New fines are automatically issued upon complaint approval."
       />
 
       <Card>
@@ -145,7 +145,7 @@ export default function MyFinesPage() {
               ) : (
                 !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                       You have no fines. Great job!
                     </TableCell>
                   </TableRow>
