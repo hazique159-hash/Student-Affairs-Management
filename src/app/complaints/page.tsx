@@ -1,6 +1,6 @@
 
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -49,6 +49,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
@@ -61,7 +63,6 @@ export default function ComplaintsPage() {
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
-  // Example: Ordered Query for real-time collection fetching
   const complaintsRef = useMemoFirebase(
     () =>
       firestore && isAdmin
@@ -100,21 +101,17 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Update master complaint
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // 2. Update filer's copy
         const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
         batch.update(filerComplaintRef, { status: newStatus });
 
-        // 3. If complaint is being approved for the first time, increment student's complaint count
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             const studentRef = doc(firestore, 'students', complaint.studentId);
             batch.update(studentRef, { complaintCount: increment(1) });
         }
         
-        // 4. Filtered Query to find student user account
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
@@ -193,6 +190,46 @@ export default function ComplaintsPage() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!complaints || complaints.length === 0) return;
+
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text('AffairsConnect - Student Complaints Report', 14, 15);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
+
+    const tableData = complaints.map((c) => [
+      c.studentName,
+      c.studentId,
+      c.title,
+      c.filedByName,
+      c.status,
+      c.dateSubmitted?.seconds ? format(new Date(c.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'
+    ]);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Student Name', 'Reg No', 'Violation', 'Teacher', 'Status', 'Date Submitted']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] }, // Primary color
+      styles: { fontSize: 8 },
+    });
+
+    doc.save(`complaints-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    
+    toast({
+      title: 'PDF Generated',
+      description: 'Your report has been downloaded.',
+    });
+  };
+
   const isVideo = (url?: string) => {
     if (!url) return false;
     return url.startsWith('data:video/') || url.match(/\.(mp4|webm|ogg)$/i);
@@ -208,7 +245,14 @@ export default function ComplaintsPage() {
         title="Complaint Management"
         icon={ShieldQuestion}
         description="Review, approve, and manage all student complaints."
-      />
+      >
+        {complaints && complaints.length > 0 && (
+          <Button variant="outline" onClick={handleDownloadPDF}>
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
+          </Button>
+        )}
+      </PageHeader>
 
       <Card>
         <CardHeader>
