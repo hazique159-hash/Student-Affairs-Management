@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart2, Users, UserCheck, Loader2, MessageSquareWarning } from 'lucide-react';
+import { BarChart2, Users, UserCheck, Loader2, MessageSquareWarning, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { AnalyticsChart } from '@/components/analytics-chart';
 import {
@@ -36,6 +36,8 @@ export default function AnalyticsPage() {
   const { data: complaints, isLoading: isLoadingComplaints } =
     useCollection<Complaint>(complaintsRef);
 
+  const pendingComplaintsCount = complaints?.filter(c => c.status === 'Pending').length ?? 0;
+
   const isLoading = isLoadingStudents || isLoadingTeachers || isLoadingComplaints;
 
   return (
@@ -46,7 +48,7 @@ export default function AnalyticsPage() {
         description="Visual representations of student affairs data."
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -98,6 +100,24 @@ export default function AnalyticsPage() {
             )}
             <p className="text-xs text-muted-foreground">
               Total filed complaints.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Pending Complaints
+            </CardTitle>
+            <Clock className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            {isLoadingComplaints ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <div className="text-2xl font-bold text-primary">{pendingComplaintsCount}</div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Awaiting admin review.
             </p>
           </CardContent>
         </Card>
