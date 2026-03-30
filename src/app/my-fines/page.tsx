@@ -1,3 +1,4 @@
+
 'use client';
 import { CircleDollarSign, Loader2 } from 'lucide-react';
 import {
@@ -18,20 +19,20 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Fine } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { fines as allFines } from '@/lib/data';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { collection, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 
 export default function MyFinesPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [fines, setFines] = useState<Fine[]>([]);
   const [payingFineId, setPayingFineId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,36 +41,37 @@ export default function MyFinesPage() {
       }
   }, [isUserLoading, user, router]);
 
-  const studentId = useMemo(() => {
-    if (!user?.email) return null;
-    return user.email.split('@')[0].toUpperCase();
-  }, [user]);
+  const finesRef = useMemoFirebase(
+    () => (firestore && user ? query(collection(firestore, `users/${user.uid}/fines`), orderBy('dateIssued', 'desc')) : null),
+    [firestore, user]
+  );
+  const { data: fines, isLoading: isLoadingFines } = useCollection<Fine>(finesRef);
 
-  useEffect(() => {
-    if (studentId) {
-      const studentFines = allFines.filter(fine => fine.studentId === studentId);
-      setFines(studentFines);
-    }
-  }, [studentId]);
-
-  const handlePayFine = (fineId: string) => {
-    setPayingFineId(fineId);
+  const handlePayFine = async (fine: Fine) => {
+    if (!firestore || !user) return;
+    setPayingFineId(fine.id);
+    
     // Simulate payment processing
-    setTimeout(() => {
-      setFines(prevFines =>
-        prevFines.map(fine =>
-          fine.id === fineId ? { ...fine, isPaid: true } : fine
-        )
-      );
-      setPayingFineId(null);
+    try {
+      const fineRef = doc(firestore, `users/${user.uid}/fines`, fine.id);
+      await updateDoc(fineRef, { isPaid: true });
+      
       toast({
         title: 'Payment Successful',
         description: 'Your fine has been marked as paid.',
       });
-    }, 1500);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Payment Failed',
+        description: error.message || 'Could not process payment.',
+      });
+    } finally {
+      setPayingFineId(null);
+    }
   };
 
-  const isLoading = isUserLoading;
+  const isLoading = isUserLoading || isLoadingFines;
 
   return (
     <div className="space-y-8">
@@ -128,7 +130,7 @@ export default function MyFinesPage() {
                       ) : (
                         <Button
                           size="sm"
-                          onClick={() => handlePayFine(fine.id)}
+                          onClick={() => handlePayFine(fine)}
                           disabled={payingFineId === fine.id}
                         >
                           {payingFineId === fine.id ? (

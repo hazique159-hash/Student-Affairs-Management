@@ -126,38 +126,58 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Update master collection
-        const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
-        batch.update(masterComplaintRef, { status: newStatus });
-
-        // 2. Update filer's history
-        const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-        batch.update(filerComplaintRef, { status: newStatus });
-
-        // 3. Update student metrics
-        if (newStatus === 'Approved' && complaint.status !== 'Approved') {
-            const studentRef = doc(firestore, 'students', complaint.studentId);
-            batch.update(studentRef, { complaintCount: increment(1) });
-        } else if (complaint.status === 'Approved' && (newStatus === 'Rejected' || newStatus === 'Resolved')) {
-             // Optional: If resolved or rejected after approval, maybe decrement? 
-             // Usually approved stays in count, but let's keep it simple.
-        }
-        
-        // 4. Update student's portal portal copy
+        // 1. Find student's user account to sync data
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
+        // 2. Update master collection
+        const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
+        batch.update(masterComplaintRef, { status: newStatus });
+
+        // 3. Update filer's history
+        const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+        batch.update(filerComplaintRef, { status: newStatus });
+
+        // 4. Update student metrics and ISSUE FINE if approved
+        if (newStatus === 'Approved' && complaint.status !== 'Approved') {
+            const studentRef = doc(firestore, 'students', complaint.studentId);
+            batch.update(studentRef, { complaintCount: increment(1) });
+
+            // Automatically issue a Rs. 1000 fine on approval
+            if (!studentUserSnapshot.empty) {
+                const studentUserDoc = studentUserSnapshot.docs[0];
+                const fineId = doc(collection(firestore, 'id_generator')).id;
+                const fineRef = doc(firestore, `users/${studentUserDoc.id}/fines`, fineId);
+                
+                const now = new Date();
+                const dueDate = new Date();
+                dueDate.setDate(now.getDate() + 30); // 30 days to pay
+
+                batch.set(fineRef, {
+                    id: fineId,
+                    studentId: complaint.studentId,
+                    amount: 1000,
+                    reason: `Violation Fine: ${complaint.title}`,
+                    dateIssued: now.toISOString(),
+                    dateDue: dueDate.toISOString(),
+                    isPaid: false
+                });
+            }
+        }
+        
+        // 5. Update student's portal portal copy
         if (!studentUserSnapshot.empty) {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
-            // Use update since it already exists from filing time
             batch.update(studentComplaintRef, { status: newStatus });
         }
         
         await batch.commit();
         toast({
             title: `Complaint ${newStatus}`,
-            description: `The complaint status has been synchronized across all portals.`
+            description: newStatus === 'Approved' 
+                ? `Complaint approved and Rs. 1000 fine issued to ${complaint.studentName}.`
+                : `The complaint status has been updated.`
         });
 
     } catch (error: any) {
