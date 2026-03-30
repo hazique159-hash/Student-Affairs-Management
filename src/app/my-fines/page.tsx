@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 
 export default function MyFinesPage() {
   const { user, isUserLoading } = useUser();
@@ -41,7 +41,7 @@ export default function MyFinesPage() {
   }, [isUserLoading, user, router]);
 
   const finesRef = useMemoFirebase(
-    () => (firestore && user ? query(collection(firestore, 'users', user.uid, 'fines'), orderBy('dateIssued', 'desc')) : null),
+    () => (firestore && user ? collection(firestore, 'users', user.uid, 'fines') : null),
     [firestore, user]
   );
   const { data: fines, isLoading: isLoadingFines } = useCollection<Fine>(finesRef);
@@ -56,7 +56,7 @@ export default function MyFinesPage() {
       
       toast({
         title: 'Payment Successful',
-        description: 'Your fine of Rs. 1000 has been marked as paid.',
+        description: 'Fine has been marked as paid.',
       });
     } catch (error: any) {
       toast({
@@ -111,12 +111,14 @@ export default function MyFinesPage() {
                   </TableRow>
                 ))
               ) : fines && fines.length > 0 ? (
-                fines.map((fine) => (
+                fines
+                  .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
+                  .map((fine) => (
                   <TableRow key={fine.id}>
-                    <TableCell>{new Date(fine.dateIssued).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</TableCell>
+                    <TableCell>{new Date(fine.dateIssued).toLocaleDateString('en-GB')}</TableCell>
                     <TableCell>{fine.reason}</TableCell>
                     <TableCell className="font-semibold text-primary">Rs. {fine.amount}</TableCell>
-                    <TableCell>{new Date(fine.dateDue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</TableCell>
+                    <TableCell>{new Date(fine.dateDue).toLocaleDateString('en-GB')}</TableCell>
                     <TableCell>
                       <Badge variant={fine.isPaid ? 'secondary' : 'destructive'}>
                         {fine.isPaid ? 'Paid' : 'Unpaid'}

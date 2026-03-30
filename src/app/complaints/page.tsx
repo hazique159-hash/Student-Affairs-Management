@@ -55,7 +55,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function ComplaintsPage() {
@@ -122,13 +122,17 @@ export default function ComplaintsPage() {
 
     try {
         const batch = writeBatch(firestore);
+        const regId = complaint.studentId.toUpperCase();
 
-        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId.toUpperCase()));
+        // Find the student's portal UID
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
+        // 1. Update master complaint
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
+        // 2. Update filer's history if available
         if (complaint.filedById) {
           const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
           batch.update(filerComplaintRef, { status: newStatus });
@@ -136,12 +140,13 @@ export default function ComplaintsPage() {
 
         let fineIssued = false;
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
-            const studentRef = doc(firestore, 'students', complaint.studentId);
+            // Increment master complaint count for student
+            const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
 
             if (!studentUserSnapshot.empty) {
                 const studentUserDoc = studentUserSnapshot.docs[0];
-                const fineId = doc(collection(firestore, 'id_generator')).id;
+                const fineId = doc(collection(firestore, 'fines')).id; // Use a dedicated collection for IDs
                 const fineRef = doc(firestore, `users/${studentUserDoc.id}/fines`, fineId);
                 
                 const now = new Date();
@@ -150,9 +155,9 @@ export default function ComplaintsPage() {
 
                 batch.set(fineRef, {
                     id: fineId,
-                    studentId: complaint.studentId,
+                    studentId: regId,
                     amount: 1000,
-                    reason: `Violation: ${complaint.title}`,
+                    reason: `Violation Approved: ${complaint.title}`,
                     dateIssued: now.toISOString(),
                     dateDue: dueDate.toISOString(),
                     isPaid: false
@@ -161,6 +166,7 @@ export default function ComplaintsPage() {
             }
         }
         
+        // 3. Update student's portal view
         if (!studentUserSnapshot.empty) {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
@@ -171,7 +177,7 @@ export default function ComplaintsPage() {
         toast({
             title: `Complaint ${newStatus}`,
             description: newStatus === 'Approved' 
-                ? (fineIssued ? `Complaint approved and Rs. 1000 fine issued to ${complaint.studentName}.` : `Complaint approved for ${complaint.studentName}. (Note: No portal account found to issue automated fine)`)
+                ? (fineIssued ? `Approved and Rs. 1000 fine issued to ${complaint.studentName}.` : `Approved for ${complaint.studentName}. (Portal account not found for automated fine)`)
                 : `The complaint status has been updated.`
         });
 
@@ -179,7 +185,7 @@ export default function ComplaintsPage() {
         toast({
             variant: 'destructive',
             title: 'Update Failed',
-            description: error.message || 'Could not update the complaint status.'
+            description: error.message || 'Could not update status.'
         });
     } finally {
         setUpdatingId(null);
@@ -209,21 +215,21 @@ export default function ComplaintsPage() {
       }
       
       if (complaint.status === 'Approved' || complaint.status === 'Resolved') {
-          const studentRef = doc(firestore, 'students', complaint.studentId);
+          const studentRef = doc(firestore, 'students', complaint.studentId.toUpperCase());
           batch.update(studentRef, { complaintCount: increment(-1) });
       }
 
       await batch.commit();
       toast({
           title: 'Complaint Deleted',
-          description: `The complaint against ${complaint.studentName} has been permanently deleted.`
+          description: `Permanently removed.`
       });
 
     } catch (error: any) {
       toast({
           variant: 'destructive',
           title: 'Delete Failed',
-          description: error.message || 'Could not delete the complaint.'
+          description: error.message
       });
     } finally {
       setDeletingId(null);
@@ -234,10 +240,8 @@ export default function ComplaintsPage() {
     if (!filteredComplaints || filteredComplaints.length === 0) return;
     const doc = new jsPDF();
     doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
     doc.text('AffairsConnect - Student Complaints Report', 14, 15);
     doc.setFontSize(10);
-    doc.setTextColor(100);
     doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
     const tableData = filteredComplaints.map((c) => [
       c.studentName,
@@ -251,16 +255,8 @@ export default function ComplaintsPage() {
       startY: 35,
       head: [['Student Name', 'Reg No', 'Violation', 'Teacher/User', 'Status', 'Date Submitted']],
       body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 8 },
     });
-    doc.save(`complaints-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-  };
-
-  const isVideo = (url?: string) => {
-    if (!url) return false;
-    return url.startsWith('data:video/') || url.match(/\.(mp4|webm|ogg)$/i);
+    doc.save(`complaints-report.pdf`);
   };
 
   if (isLoading || !isAdmin) {
@@ -370,7 +366,7 @@ export default function ComplaintsPage() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>This action cannot be undone. This will permanently delete this complaint.</AlertDialogDescription>
+                                  <AlertDialogDescription>Permanently delete this complaint?</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -397,7 +393,7 @@ export default function ComplaintsPage() {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>{viewingComplaint.title}</DialogTitle>
-                    <DialogDescription>Details for the complaint filed against {viewingComplaint.studentName}.</DialogDescription>
+                    <DialogDescription>Complaint against {viewingComplaint.studentName}.</DialogDescription>
                 </DialogHeader>
                 <Separator />
                 <ScrollArea className="max-h-[60vh] pr-4">
@@ -414,7 +410,7 @@ export default function ComplaintsPage() {
                         <div className="space-y-2">
                             <p className="font-semibold text-muted-foreground">Evidence</p>
                             <div className="relative border rounded-lg overflow-hidden bg-black flex items-center justify-center">
-                              {isVideo(viewingComplaint.evidenceUrl) ? (
+                              {viewingComplaint.evidenceUrl.startsWith('data:video/') ? (
                                 <video src={viewingComplaint.evidenceUrl} controls className="max-h-[300px] w-full" />
                               ) : (
                                 <div className="relative aspect-video w-full h-[250px]">
