@@ -232,11 +232,11 @@ export default function ComplaintsPage() {
 
   const handleDownloadPDF = () => {
     if (!filteredComplaints || filteredComplaints.length === 0) return;
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text('AffairsConnect - Student Complaints Report', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
+    const pdf = new jsPDF();
+    pdf.setFontSize(20);
+    pdf.text('AffairsConnect - Student Complaints Report', 14, 15);
+    pdf.setFontSize(10);
+    pdf.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
     const tableData = filteredComplaints.map((c) => [
       c.studentName,
       c.studentId,
@@ -245,12 +245,12 @@ export default function ComplaintsPage() {
       c.status,
       c.dateSubmitted?.seconds ? format(new Date(c.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'
     ]);
-    autoTable(doc, {
+    autoTable(pdf, {
       startY: 35,
       head: [['Student Name', 'Reg No', 'Violation', 'Teacher/User', 'Status', 'Date Submitted']],
       body: tableData,
     });
-    doc.save(`complaints-report.pdf`);
+    pdf.save(`complaints-report.pdf`);
   };
 
   if (isUserLoading || !isAdmin) {
