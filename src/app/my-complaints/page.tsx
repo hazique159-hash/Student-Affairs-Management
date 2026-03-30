@@ -1,6 +1,5 @@
-
 'use client';
-import { MessageSquareHeart, Plus, Loader2 } from 'lucide-react';
+import { MessageSquareHeart, Plus, Loader2, CircleDollarSign } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -22,15 +21,18 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch, getDocs, where } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MyComplaintsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -46,6 +48,43 @@ export default function MyComplaintsPage() {
     [firestore, user]
   );
   const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
+
+  const handlePayFine = async (complaint: Complaint) => {
+    if (!firestore || !user) return;
+    setPayingId(complaint.id);
+
+    try {
+        const batch = writeBatch(firestore);
+        
+        // 1. Update personal complaint status
+        const personalRef = doc(firestore, `users/${user.uid}/complaints`, complaint.id);
+        batch.update(personalRef, { status: 'Resolved' });
+        
+        // 2. Update master complaint status
+        const masterRef = doc(firestore, 'complaints', complaint.id);
+        batch.update(masterRef, { status: 'Resolved' });
+
+        // 3. Find teacher/filer to update their record too if it exists
+        if (complaint.filedById && complaint.filedById !== 'system') {
+            const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+            batch.update(filerComplaintRef, { status: 'Resolved' });
+        }
+
+        await batch.commit();
+        toast({
+            title: 'Fine Paid Successfully',
+            description: 'Rs. 1000 has been paid and the complaint is now resolved.',
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Payment Failed',
+            description: error.message || 'Could not process the fine payment.',
+        });
+    } finally {
+        setPayingId(null);
+    }
+  };
 
   const isLoading = isUserLoading || isLoadingComplaints;
   const isStudent = user?.email?.endsWith('@student.com');
@@ -75,42 +114,40 @@ export default function MyComplaintsPage() {
         <CardHeader>
           <CardTitle>Complaint History</CardTitle>
           <CardDescription>
-            You can view the status of relevant complaints here.
+            {isStudent ? "View fines and details of complaints filed against you." : "View the status of complaints you've submitted."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date Submitted</TableHead>
+                <TableHead>Date</TableHead>
                 {isStudent && <TableHead>Filed By</TableHead>}
                 {isTeacher && <TableHead>Student</TableHead>}
-                <TableHead>Title</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Status</TableHead>
+                <TableHead>Violation Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading &&
-                Array.from({ length: 2 }).map((_, i) => (
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    {isStudent && <TableCell><Skeleton className="h-5 w-32" /></TableCell>}
-                    {isTeacher && <TableCell><Skeleton className="h-5 w-32" /></TableCell>}
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-64" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                   </TableRow>
-                ))}
-              {!isLoading && complaints && complaints.length > 0 ? (
+                ))
+              ) : complaints && complaints.length > 0 ? (
                 complaints.map((complaint) => (
                   <TableRow key={complaint.id}>
                     <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     {isStudent && <TableCell>{complaint.filedByName}</TableCell>}
                     {isTeacher && <TableCell>{complaint.studentName}</TableCell>}
                     <TableCell>{complaint.title}</TableCell>
-                    <TableCell className="max-w-xs truncate">{complaint.description}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
                        <Badge
                         variant={
                           complaint.status === 'Rejected'
@@ -125,16 +162,33 @@ export default function MyComplaintsPage() {
                         {complaint.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                       {isStudent && complaint.status === 'Approved' ? (
+                         <Button 
+                            size="sm" 
+                            onClick={() => handlePayFine(complaint)} 
+                            disabled={payingId === complaint.id}
+                            className="bg-green-600 hover:bg-green-700"
+                         >
+                            {payingId === complaint.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <CircleDollarSign className="mr-2 h-4 w-4" />
+                            )}
+                            Pay Fine (Rs. 1000)
+                         </Button>
+                       ) : (
+                         <span className="text-xs text-muted-foreground italic">No action needed</span>
+                       )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
-                !isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={isStudent ? 5 : isTeacher ? 5 : 4} className="text-center h-24">
-                      {isStudent ? "No complaints have been filed against you." : "You have not filed any complaints."}
-                    </TableCell>
-                  </TableRow>
-                )
+                <TableRow>
+                  <TableCell colSpan={isStudent || isTeacher ? 5 : 4} className="text-center h-24 text-muted-foreground">
+                    {isStudent ? "No complaints found against you." : "You have not filed any complaints."}
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
