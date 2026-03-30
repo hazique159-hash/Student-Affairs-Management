@@ -111,14 +111,14 @@ export default function MyComplaintsPage() {
         // 1. Update personal complaint status and attach receipt
         const personalRef = doc(firestore, `users/${user.uid}/complaints`, payingComplaint.id);
         batch.update(personalRef, { 
-            status: 'Resolved',
+            paymentStatus: 'Submitted',
             paymentReceiptUrl: receiptPreview 
         });
         
         // 2. Update master complaint status
         const masterRef = doc(firestore, 'complaints', payingComplaint.id);
         batch.update(masterRef, { 
-            status: 'Resolved',
+            paymentStatus: 'Submitted',
             paymentReceiptUrl: receiptPreview
         });
 
@@ -126,7 +126,7 @@ export default function MyComplaintsPage() {
         if (payingComplaint.filedById && payingComplaint.filedById !== 'system') {
             const filerComplaintRef = doc(firestore, `users/${payingComplaint.filedById}/complaints`, payingComplaint.id);
             batch.update(filerComplaintRef, { 
-                status: 'Resolved',
+                paymentStatus: 'Submitted',
                 paymentReceiptUrl: receiptPreview
             });
         }
@@ -134,8 +134,8 @@ export default function MyComplaintsPage() {
         await batch.commit();
         
         toast({
-            title: 'Payment Submitted',
-            description: 'Your fine has been paid and the record is resolved.',
+            title: 'Receipt Submitted',
+            description: 'Your payment proof has been sent to Admin for verification.',
         });
         
         setPayingComplaint(null);
@@ -143,8 +143,8 @@ export default function MyComplaintsPage() {
     } catch (error: any) {
         toast({
             variant: 'destructive',
-            title: 'Payment Failed',
-            description: error.message || 'Could not process the fine payment.',
+            title: 'Submission Failed',
+            description: error.message || 'Could not upload payment proof.',
         });
     } finally {
         setIsProcessingPayment(false);
@@ -190,6 +190,7 @@ export default function MyComplaintsPage() {
                 {isStudent && <TableHead>Filed By</TableHead>}
                 {isTeacher && <TableHead>Student</TableHead>}
                 <TableHead>Title</TableHead>
+                <TableHead>Payment Status</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -202,6 +203,7 @@ export default function MyComplaintsPage() {
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -212,6 +214,14 @@ export default function MyComplaintsPage() {
                     {isStudent && <TableCell>{complaint.filedByName}</TableCell>}
                     {isTeacher && <TableCell>{complaint.studentName}</TableCell>}
                     <TableCell>{complaint.title}</TableCell>
+                    <TableCell>
+                       {complaint.status === 'Approved' && (
+                          <Badge variant={complaint.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
+                             {complaint.paymentStatus === 'Submitted' ? 'Pending Review' : 'Unpaid'}
+                          </Badge>
+                       )}
+                       {complaint.status === 'Resolved' && <Badge className="bg-green-100 text-green-700">Verified</Badge>}
+                    </TableCell>
                     <TableCell>
                        <Badge
                         variant={
@@ -228,7 +238,7 @@ export default function MyComplaintsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       {isStudent && complaint.status === 'Approved' ? (
+                       {isStudent && complaint.status === 'Approved' && complaint.paymentStatus !== 'Submitted' ? (
                          <Button 
                             size="sm" 
                             onClick={() => setPayingComplaint(complaint)} 
@@ -239,7 +249,8 @@ export default function MyComplaintsPage() {
                          </Button>
                        ) : (
                          <span className="text-xs text-muted-foreground italic">
-                            {complaint.status === 'Resolved' ? 'Paid' : 'No Action Required'}
+                            {complaint.status === 'Resolved' ? 'Record Cleared' : 
+                             complaint.paymentStatus === 'Submitted' ? 'Waiting for Admin' : 'No Action'}
                          </span>
                        )}
                     </TableCell>
@@ -247,7 +258,7 @@ export default function MyComplaintsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isStudent || isTeacher ? 5 : 4} className="text-center h-24 text-muted-foreground">
+                  <TableCell colSpan={isStudent || isTeacher ? 6 : 5} className="text-center h-24 text-muted-foreground">
                     No records found.
                   </TableCell>
                 </TableRow>

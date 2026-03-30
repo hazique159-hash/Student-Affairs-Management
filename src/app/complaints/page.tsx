@@ -1,5 +1,6 @@
+
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Search, Download } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -65,6 +66,7 @@ export default function ComplaintsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingComplaint, setViewingComplaint] = useState<Complaint | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
   
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -120,25 +122,32 @@ export default function ComplaintsPage() {
         const batch = writeBatch(firestore);
         const regId = complaint.studentId.toUpperCase();
 
+        const updateData: Partial<Complaint> = { status: newStatus };
+        if (newStatus === 'Resolved') {
+            updateData.paymentStatus = 'Verified';
+        }
+
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
-        batch.update(masterComplaintRef, { status: newStatus });
+        batch.update(masterComplaintRef, updateData);
 
         if (newStatus === 'Approved') {
             const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
         }
 
+        // Update student portal copy
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
         if (!studentUserSnapshot.empty) {
             const studentUid = studentUserSnapshot.docs[0].id;
             const studentComplaintRef = doc(firestore, `users/${studentUid}/complaints`, complaint.id);
-            batch.update(studentComplaintRef, { status: newStatus });
+            batch.update(studentComplaintRef, updateData);
         }
 
+        // Update filer copy
         if (complaint.filedById) {
             const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-            batch.update(filerComplaintRef, { status: newStatus });
+            batch.update(filerComplaintRef, updateData);
         }
         
         await batch.commit();
@@ -235,7 +244,7 @@ export default function ComplaintsPage() {
                 <TableHead>Student</TableHead>
                 <TableHead>Violations</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>Fine Status</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -249,7 +258,21 @@ export default function ComplaintsPage() {
                   </TableCell>
                   <TableCell><Badge variant={(studentComplaintCounts[c.studentId] || 0) > 2 ? 'destructive' : 'outline'}>{studentComplaintCounts[c.studentId] || 0}</Badge></TableCell>
                   <TableCell>{c.title}</TableCell>
-                  <TableCell>{c.dateSubmitted?.seconds ? format(new Date(c.dateSubmitted.seconds * 1000), 'PP') : '...'}</TableCell>
+                  <TableCell>
+                     {c.status === 'Approved' && (
+                        <div className="flex items-center gap-2">
+                           <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
+                              {c.paymentStatus === 'Submitted' ? 'Paid - Review Needed' : 'Unpaid'}
+                           </Badge>
+                           {c.paymentReceiptUrl && (
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
+                                 <Eye className="h-4 w-4" />
+                              </Button>
+                           )}
+                        </div>
+                     )}
+                     {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Verified</Badge>}
+                  </TableCell>
                   <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -259,7 +282,10 @@ export default function ComplaintsPage() {
                                 <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
                             </>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(c)}>View</Button>
+                        {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>Resolve</Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(c)}>Details</Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
                             <AlertDialogContent>
@@ -276,6 +302,7 @@ export default function ComplaintsPage() {
         </CardContent>
       </Card>
 
+      {/* Complaint Details Dialog */}
       {viewingComplaint && (
         <Dialog open={!!viewingComplaint} onOpenChange={() => setViewingComplaint(null)}>
             <DialogContent className="sm:max-w-[500px]">
@@ -297,6 +324,19 @@ export default function ComplaintsPage() {
                   </div>
                 </ScrollArea>
                 <DialogFooter><Button onClick={() => setViewingComplaint(null)}>Close</Button></DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Receipt View Dialog */}
+      {viewingReceipt && (
+        <Dialog open={!!viewingReceipt} onOpenChange={() => setViewingReceipt(null)}>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader><DialogTitle>Payment Receipt</DialogTitle></DialogHeader>
+                <div className="relative aspect-[4/3] w-full bg-black rounded-lg overflow-hidden border">
+                    <Image src={viewingReceipt} alt="Payment Receipt" fill className="object-contain" />
+                </div>
+                <DialogFooter><Button onClick={() => setViewingReceipt(null)}>Close</Button></DialogFooter>
             </DialogContent>
         </Dialog>
       )}

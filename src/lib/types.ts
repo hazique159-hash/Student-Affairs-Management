@@ -77,6 +77,8 @@ export type Complaint = {
   filedById: string;
   filedByName: string;
   evidenceUrl?: string;
+  paymentReceiptUrl?: string;
+  paymentStatus?: 'Unpaid' | 'Submitted' | 'Verified';
 };
 
 export type TeacherAvailability = {
