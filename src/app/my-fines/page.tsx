@@ -1,3 +1,4 @@
+
 'use client';
 import { CircleDollarSign, Loader2 } from 'lucide-react';
 import {
@@ -24,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, query, where } from 'firebase/firestore';
 
 export default function MyFinesPage() {
   const { user, isUserLoading } = useUser();
@@ -40,9 +41,12 @@ export default function MyFinesPage() {
       }
   }, [isUserLoading, user, router]);
 
+  // Derive registration number from email (e.g., BCS223089@student.com -> BCS223089)
+  const myRegNo = user?.email?.split('@')[0].toUpperCase();
+
   const finesRef = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'users', user.uid, 'fines') : null),
-    [firestore, user]
+    () => (firestore && myRegNo ? query(collection(firestore, 'fines'), where('studentId', '==', myRegNo)) : null),
+    [firestore, myRegNo]
   );
   const { data: fines, isLoading: isLoadingFines } = useCollection<Fine>(finesRef);
 
@@ -51,7 +55,7 @@ export default function MyFinesPage() {
     setPayingFineId(fine.id);
     
     try {
-      const fineRef = doc(firestore, 'users', user.uid, 'fines', fine.id);
+      const fineRef = doc(firestore, 'fines', fine.id);
       await updateDoc(fineRef, { isPaid: true });
       
       toast({

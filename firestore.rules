@@ -25,14 +25,11 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
 
-    // Admin Roles: Public read allowed to support the recovery email lookup on the forgot password page.
-    // Existence of a document for a given UID grants admin privileges.
     match /roles_admin/{adminId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    // Teachers Collection: Admins manage teachers. Teachers can read their own profile.
     match /teachers/{teacherId} {
       allow create: if isAdmin();
       allow get: if isOwner(teacherId) || isAdmin();
@@ -40,73 +37,55 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     
-    // Students Collection: Admins manage students. Teachers/Students can read specific records for verification.
     match /students/{studentId} {
       allow create: if isAdmin();
-      allow get: if isSignedIn(); // Allow signed-in users to lookup student names/details for complaints/counseling
+      allow get: if isSignedIn();
       allow list: if isAdmin() || isTeacher();
       allow update, delete: if isAdmin();
     }
 
-    // Users Collection: Links auth UIDs to student IDs. 
-    // Teachers need read access to map registration numbers to UIDs.
     match /users/{userId} {
-      allow create: if isAdmin();
+      allow create: if isAdmin() || isOwner(userId);
       allow read: if isOwner(userId) || isAdmin() || isTeacher();
+      allow update: if isOwner(userId) || isAdmin();
     }
 
-    // Announcements Collection: Publicly readable, admin-writable.
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
     
-    // Complaints Collection: Admins can read all. Students/Teachers can create. Admins can update status.
     match /complaints/{complaintId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isSignedIn(); // Students and Teachers can create complaints
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list, update, delete: if isAdmin();
+      allow create: if isSignedIn();
     }
-    
-    // Counseling Availability: Admin can manage, signed-in users can read.
-    match /counseling_availability/{availabilityId} {
+
+    match /fines/{fineId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
     
-    // Volunteer Applications: Admins can manage, signed-in users can create.
-    match /volunteerApplications/{applicationId} {
-      allow get, list, update: if isAdmin();
-      allow create: if isSignedIn();
-    }
-
-    // This rule allows an admin to query the 'counselingSessions' collection group.
     match /{path=**}/counselingSessions/{counselingSessionId} {
       allow get, list: if isAdmin();
     }
 
-    // Student-specific Subcollections
     match /users/{userId}/counselingSessions/{counselingSessionId} {
-      allow read, write: if isAdmin() || isOwner(userId);
-    }
-
-    match /users/{userId}/fines/{fineId} {
       allow read, write: if isAdmin() || isOwner(userId);
     }
 
     match /users/{userId}/complaints/{complaintId} {
         allow read: if isOwner(userId) || isTeacher() || isAdmin();
-        // Admin/Teachers can create a complaint in a student's subcollection for portal visibility
         allow create: if isOwner(userId) || isTeacher() || isAdmin();
-        allow update: if isAdmin(); // Admin can update status
-        allow delete: if isAdmin();
+        allow update, delete: if isAdmin();
     }
     
+    match /{path=**}/volunteerApplications/{applicationId} {
+      allow read, write: if isAdmin();
+    }
+
     match /users/{userId}/volunteerApplications/{applicationId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create, update: if isAdmin(); // Admin can sync status
+      allow create, update, delete: if isAdmin() || isOwner(userId);
     }
   }
 }

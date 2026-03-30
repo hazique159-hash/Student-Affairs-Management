@@ -193,11 +193,15 @@
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N Fine)"
+          "description": "Registration number of the student."
         },
         "amount": {
           "type": "number",
           "description": "Amount of the fine."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for the fine."
         },
         "dateIssued": {
           "type": "string",
@@ -218,6 +222,7 @@
         "id",
         "studentId",
         "amount",
+        "reason",
         "dateIssued",
         "dateDue",
         "isPaid"
@@ -436,7 +441,7 @@
           "schema": {
             "$ref": "#/backend/entities/Admin"
           },
-          "description": "Collection to store admin roles. Existence of a document for a given UID grants admin privileges.",
+          "description": "Collection to store admin roles.",
           "params": [
             {
               "name": "adminId",
@@ -452,7 +457,7 @@
           "schema": {
             "$ref": "#/backend/entities/Teacher"
           },
-          "description": "Collection to store teacher data.  Existence of a document grants teacher privileges.",
+          "description": "Collection to store teacher data.",
           "params": [
             {
               "name": "teacherId",
@@ -472,7 +477,7 @@
           "params": [
             {
               "name": "studentId",
-              "description": "The unique ID of the student."
+              "description": "The registration number of the student."
             }
           ]
         }
@@ -500,11 +505,27 @@
           "schema": {
             "$ref": "#/backend/entities/Complaint"
           },
-          "description": "Top-level collection for all complaints, for admin/teacher overview.",
+          "description": "Top-level collection for all complaints.",
           "params": [
             {
               "name": "complaintId",
               "description": "The unique ID of the complaint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/fines/{fineId}",
+        "definition": {
+          "entityName": "Fine",
+          "schema": {
+            "$ref": "#/backend/entities/Fine"
+          },
+          "description": "Top-level collection for all fines, issued by registration number.",
+          "params": [
+            {
+              "name": "fineId",
+              "description": "The unique ID of the fine."
             }
           ]
         }
@@ -520,31 +541,11 @@
           "params": [
             {
               "name": "userId",
-              "description": "The user ID (student ID) of the student for whom the session is scheduled."
+              "description": "The user ID (student UID) of the student."
             },
             {
               "name": "counselingSessionId",
               "description": "The unique ID of the counseling session."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/fines/{fineId}",
-        "definition": {
-          "entityName": "Fine",
-          "schema": {
-            "$ref": "#/backend/entities/Fine"
-          },
-          "description": "Subcollection to store fines issued to each student.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The user ID (student ID) of the student who received the fine."
-            },
-            {
-              "name": "fineId",
-              "description": "The unique ID of the fine."
             }
           ]
         }
@@ -556,7 +557,7 @@
           "schema": {
             "$ref": "#/backend/entities/Complaint"
           },
-          "description": "Subcollection to store complaints. For filers, it's their history. For students, it's approved complaints against them.",
+          "description": "Subcollection to store personal complaint history.",
           "params": [
             {
               "name": "userId",
@@ -568,60 +569,7 @@
             }
           ]
         }
-      },
-      {
-        "path": "/counseling_availability/{availabilityId}",
-        "definition": {
-          "entityName": "TeacherAvailability",
-          "schema": {
-            "$ref": "#/backend/entities/TeacherAvailability"
-          },
-          "description": "Collection to store teacher availability for counseling sessions.",
-          "params": [
-            {
-              "name": "availabilityId",
-              "description": "The unique ID of the availability entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/volunteerApplications/{applicationId}",
-        "definition": {
-          "entityName": "VolunteerApplication",
-          "schema": {
-            "$ref": "#/backend/entities/VolunteerApplication"
-          },
-          "description": "Top-level collection for all volunteer applications, for admin overview.",
-          "params": [
-            {
-              "name": "applicationId",
-              "description": "The unique ID of the volunteer application."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/volunteerApplications/{applicationId}",
-        "definition": {
-          "entityName": "VolunteerApplication",
-          "schema": {
-            "$ref": "#/backend/entities/VolunteerApplication"
-          },
-          "description": "Subcollection to store volunteer applications submitted by each student.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The user ID (student auth ID) of the student who applied."
-            },
-            {
-              "name": "applicationId",
-              "description": "The unique ID of the volunteer application."
-            }
-          ]
-        }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability. It leverages denormalization and structural segregation to simplify security rules and enable atomic operations. The design incorporates explicit state modeling and consistent naming conventions for improved debuggability and maintainability.\\n\\n**Authorization Independence:** Authorization is enforced without relying on hierarchical `get()` calls, which could compromise atomic operations. For collaborative data, a membership map (`members`) is used. For user-owned data, the path-based ownership is applied. \\n\\n**QAPs Support:** The structure supports secure `list` operations (QAPs) by segregating data based on access requirements and using dedicated collections for global roles. Segregation of `announcements` enables public list access while private student data is secured by user-specific paths.\\n\\nThe structure includes collections for `admins`, `teachers`, `students`, `announcements`, `counselingSessions`, and `fines`. Admin roles are managed through a dedicated `/roles_admin/{uid}` collection, using existence checks in security rules. Teacher roles are managed through a dedicated `/teachers/{teacherId}` collection, again using existence checks. Student-specific data, such as counseling sessions and fines, are stored under `/users/{userId}/counselingSessions/{counselingSessionId}` and `/users/{userId}/fines/{fineId}`, respectively, to ensure proper data ownership and authorization."
+    ]
   }
 }
