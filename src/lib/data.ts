@@ -25,12 +25,11 @@ export const fines: Fine[] = [
   { id: 'F001', studentId: 'BCS223089', amount: 500, dateIssued: new Date(2024, 5, 15).toISOString(), dateDue: new Date(2024, 6, 15).toISOString(), isPaid: false, reason: 'Late submission of assignment' },
   { id: 'F002', studentId: 'BCS223089', amount: 200, dateIssued: new Date(2024, 4, 20).toISOString(), dateDue: new Date(2024, 5, 20).toISOString(), isPaid: true, reason: 'Library book overdue' },
   { id: 'F003', studentId: 'BCS223000', amount: 1000, dateIssued: new Date(2024, 6, 1).toISOString(), dateDue: new Date(2024, 7, 1).toISOString(), isPaid: false, reason: 'Vandalism in common room' },
+  { id: 'F004', studentId: 'BCS223089', amount: 1000, dateIssued: new Date(2024, 6, 25).toISOString(), dateDue: new Date(2024, 7, 25).toISOString(), isPaid: false, reason: 'Misconduct in examination hall' },
 ];
 
 export const complaints: Complaint[] = [
-    { id: 'C001', studentId: 'BCS223089', studentName: 'Muhammad Hazique', title: 'Wifi not working in library', description: 'The wifi connection in the main library has been unstable for the past three days.', status: 'In Progress', dateSubmitted: new Date(2024, 6, 18).toISOString() },
-    { id: 'C002', studentId: 'BCS223094', studentName: 'Amna Zara', title: 'Cafeteria food quality', description: 'The quality of food in the main cafeteria has noticeably declined this semester.', status: 'Open', dateSubmitted: new Date(2024, 6, 19).toISOString() },
-    { id: 'C003', studentId: 'BCS223089', studentName: 'Muhammad Hazique', title: 'Broken chair in Lab 4', description: 'One of the chairs in computer lab 4 has a broken leg and is a safety hazard.', status: 'Resolved', dateSubmitted: new Date(2024, 6, 15).toISOString() },
+    { id: 'C001', studentId: 'BCS223089', studentName: 'Muhammad Hazique', title: 'Wifi not working in library', description: 'The wifi connection in the main library has been unstable for the past three days.', status: 'Pending', dateSubmitted: new Date(2024, 6, 18).toISOString(), filedById: 'system', filedByName: 'Admin' },
+    { id: 'C002', studentId: 'BCS223094', studentName: 'Amna Zara', title: 'Cafeteria food quality', description: 'The quality of food in the main cafeteria has noticeably declined this semester.', status: 'Open', dateSubmitted: new Date(2024, 6, 19).toISOString(), filedById: 'system', filedByName: 'Admin' },
+    { id: 'C003', studentId: 'BCS223089', studentName: 'Muhammad Hazique', title: 'Broken chair in Lab 4', description: 'One of the chairs in computer lab 4 has a broken leg and is a safety hazard.', status: 'Resolved', dateSubmitted: new Date(2024, 6, 15).toISOString(), filedById: 'system', filedByName: 'Admin' },
 ];
-
-    
