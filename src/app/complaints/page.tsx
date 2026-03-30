@@ -134,6 +134,7 @@ export default function ComplaintsPage() {
           batch.update(filerComplaintRef, { status: newStatus });
         }
 
+        let fineIssued = false;
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             const studentRef = doc(firestore, 'students', complaint.studentId);
             batch.update(studentRef, { complaintCount: increment(1) });
@@ -156,6 +157,7 @@ export default function ComplaintsPage() {
                     dateDue: dueDate.toISOString(),
                     isPaid: false
                 });
+                fineIssued = true;
             }
         }
         
@@ -169,7 +171,7 @@ export default function ComplaintsPage() {
         toast({
             title: `Complaint ${newStatus}`,
             description: newStatus === 'Approved' 
-                ? `Complaint approved and Rs. 1000 fine issued to ${complaint.studentName}.`
+                ? (fineIssued ? `Complaint approved and Rs. 1000 fine issued to ${complaint.studentName}.` : `Complaint approved for ${complaint.studentName}. (Note: No portal account found to issue automated fine)`)
                 : `The complaint status has been updated.`
         });
 
