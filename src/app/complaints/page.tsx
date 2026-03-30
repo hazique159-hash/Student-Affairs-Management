@@ -126,7 +126,7 @@ export default function ComplaintsPage() {
         const batch = writeBatch(firestore);
 
         // 1. Find student's user account to sync data
-        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId.toUpperCase()));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
         // 2. Update master collection
@@ -158,7 +158,7 @@ export default function ComplaintsPage() {
                     id: fineId,
                     studentId: complaint.studentId,
                     amount: 1000,
-                    reason: `Violation Fine: ${complaint.title}`,
+                    reason: `Violation: ${complaint.title}`,
                     dateIssued: now.toISOString(),
                     dateDue: dueDate.toISOString(),
                     isPaid: false
@@ -166,8 +166,8 @@ export default function ComplaintsPage() {
             } else {
               toast({
                 variant: 'destructive',
-                title: 'No Student Account',
-                description: `Could not issue fine because ${complaint.studentId} user record was not found.`
+                title: 'No Student Account Found',
+                description: `Complaint approved, but fine could not be issued to ${complaint.studentId} because their portal account record is missing.`
               });
             }
         }
@@ -213,7 +213,7 @@ export default function ComplaintsPage() {
         batch.delete(filerComplaintRef);
       }
 
-      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
+      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId.toUpperCase()));
       const studentUserSnapshot = await getDocs(studentUserQuery);
       if (!studentUserSnapshot.empty) {
           const studentUserDoc = studentUserSnapshot.docs[0];
@@ -361,7 +361,7 @@ export default function ComplaintsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Student</TableHead>
-                <TableHead>Total Violations</TableHead>
+                <TableHead>Violations</TableHead>
                 <TableHead>Teacher/User</TableHead>
                 <TableHead>Violation Title</TableHead>
                 <TableHead>Date</TableHead>
@@ -418,7 +418,7 @@ export default function ComplaintsPage() {
                             </Button>
                           )}
                           
-                          <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View Details</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View</Button>
                           
                           {isAdmin && (
                             <AlertDialog>
@@ -529,7 +529,6 @@ export default function ComplaintsPage() {
             </DialogContent>
         </Dialog>
       )}
-
     </div>
   );
 }
