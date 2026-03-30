@@ -1,4 +1,3 @@
-
 'use client';
 import { MessageSquareHeart, Plus, Loader2, CircleDollarSign, Upload, X } from 'lucide-react';
 import {
@@ -108,23 +107,17 @@ export default function MyComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Update personal complaint status and attach receipt
         const personalRef = doc(firestore, `users/${user.uid}/complaints`, payingComplaint.id);
         batch.update(personalRef, { 
             paymentStatus: 'Submitted',
             paymentReceiptUrl: receiptPreview 
         });
         
-        // 2. Update master complaint status
         const masterRef = doc(firestore, 'complaints', payingComplaint.id);
         batch.update(masterRef, { 
             paymentStatus: 'Submitted',
             paymentReceiptUrl: receiptPreview
         });
-
-        // 3. Update filer's record if it exists - removed to avoid permission issues
-        // The student should not have permission to write to other users' directories
-        // The admin will see the update in the master 'complaints' collection.
 
         await batch.commit();
         
@@ -156,14 +149,14 @@ export default function MyComplaintsPage() {
     : "Track the status of your submitted violation reports.";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title={pageTitle}
         icon={MessageSquareHeart}
         description={pageDescription}
       >
         {!isStudent && (
-          <Button onClick={() => router.push('/register-complaint')}>
+          <Button size="sm" onClick={() => router.push('/register-complaint')} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             File New Complaint
           </Button>
@@ -177,144 +170,145 @@ export default function MyComplaintsPage() {
             {isStudent ? "Approved complaints require immediate fine settlement via Easypaisa." : "List of all complaints filed by you."}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                {isStudent && <TableHead>Filed By</TableHead>}
-                {isTeacher && <TableHead>Student</TableHead>}
-                <TableHead>Title</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : complaints && complaints.length > 0 ? (
-                complaints.map((complaint) => (
-                  <TableRow key={complaint.id}>
-                    <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
-                    {isStudent && <TableCell>{complaint.filedByName}</TableCell>}
-                    {isTeacher && <TableCell>{complaint.studentName}</TableCell>}
-                    <TableCell>{complaint.title}</TableCell>
-                    <TableCell>
-                       {complaint.status === 'Approved' && (
-                          <Badge variant={complaint.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
-                             {complaint.paymentStatus === 'Submitted' ? 'Pending Review' : 'Unpaid'}
-                          </Badge>
-                       )}
-                       {complaint.status === 'Resolved' && <Badge className="bg-green-100 text-green-700">Verified</Badge>}
-                    </TableCell>
-                    <TableCell>
-                       <Badge
-                        variant={
-                          complaint.status === 'Rejected'
-                            ? 'destructive'
-                            : complaint.status === 'Resolved'
-                            ? 'secondary'
-                            : complaint.status === 'Approved'
-                            ? 'default'
-                            : 'outline'
-                        }
-                      >
-                        {complaint.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                       {isStudent && complaint.status === 'Approved' && complaint.paymentStatus !== 'Submitted' ? (
-                         <Button 
-                            size="sm" 
-                            onClick={() => setPayingComplaint(complaint)} 
-                            className="bg-green-600 hover:bg-green-700"
-                         >
-                            <CircleDollarSign className="mr-2 h-4 w-4" />
-                            Pay Fine
-                         </Button>
-                       ) : (
-                         <span className="text-xs text-muted-foreground italic">
-                            {complaint.status === 'Resolved' ? 'Record Cleared' : 
-                             complaint.paymentStatus === 'Submitted' ? 'Waiting for Admin' : 'No Action'}
-                         </span>
-                       )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+        <CardContent className="px-0 sm:px-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={isStudent || isTeacher ? 6 : 5} className="text-center h-24 text-muted-foreground">
-                    No records found.
-                  </TableCell>
+                  <TableHead className="min-w-[120px]">Date</TableHead>
+                  {isStudent && <TableHead className="min-w-[120px]">Filed By</TableHead>}
+                  {isTeacher && <TableHead className="min-w-[120px]">Student</TableHead>}
+                  <TableHead className="min-w-[150px]">Title</TableHead>
+                  <TableHead className="min-w-[120px]">Payment</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : complaints && complaints.length > 0 ? (
+                  complaints.map((complaint) => (
+                    <TableRow key={complaint.id}>
+                      <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                      {isStudent && <TableCell className="truncate max-w-[100px]">{complaint.filedByName}</TableCell>}
+                      {isTeacher && <TableCell className="truncate max-w-[100px]">{complaint.studentName}</TableCell>}
+                      <TableCell className="truncate max-w-[150px]">{complaint.title}</TableCell>
+                      <TableCell>
+                         {complaint.status === 'Approved' && (
+                            <Badge variant={complaint.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
+                               {complaint.paymentStatus === 'Submitted' ? 'Pending' : 'Unpaid'}
+                            </Badge>
+                         )}
+                         {complaint.status === 'Resolved' && <Badge className="bg-green-100 text-green-700">Verified</Badge>}
+                      </TableCell>
+                      <TableCell>
+                         <Badge
+                          variant={
+                            complaint.status === 'Rejected'
+                              ? 'destructive'
+                              : complaint.status === 'Resolved'
+                              ? 'secondary'
+                              : complaint.status === 'Approved'
+                              ? 'default'
+                              : 'outline'
+                          }
+                        >
+                          {complaint.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                         {isStudent && complaint.status === 'Approved' && complaint.paymentStatus !== 'Submitted' ? (
+                           <Button 
+                              size="sm" 
+                              onClick={() => setPayingComplaint(complaint)} 
+                              className="bg-green-600 hover:bg-green-700 h-8 px-2 text-xs"
+                           >
+                              <CircleDollarSign className="mr-1 h-3 w-3" />
+                              Pay Fine
+                           </Button>
+                         ) : (
+                           <span className="text-[10px] sm:text-xs text-muted-foreground italic">
+                              {complaint.status === 'Resolved' ? 'Verified' : 
+                               complaint.paymentStatus === 'Submitted' ? 'Reviewing' : '-'}
+                           </span>
+                         )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={isStudent || isTeacher ? 6 : 5} className="text-center h-24 text-muted-foreground">
+                      No records found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Payment Dialog */}
       <Dialog open={!!payingComplaint} onOpenChange={(open) => {
         if (!open) {
             setPayingComplaint(null);
             setReceiptPreview(null);
         }
       }}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="sm:max-w-[450px] w-[95vw] rounded-lg">
           <DialogHeader>
             <DialogTitle>Fine Payment</DialogTitle>
             <DialogDescription>
               Submit your payment proof to resolve this violation record.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="bg-muted p-4 rounded-lg space-y-2 text-sm border">
+          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+            <div className="bg-muted p-3 sm:p-4 rounded-lg space-y-2 text-xs sm:text-sm border">
                 <div className="flex justify-between">
                     <span className="font-medium">Total Fine:</span>
                     <span className="text-primary font-bold">Rs. 1000</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="font-medium">Violation:</span>
-                    <span className="truncate max-w-[200px]">{payingComplaint?.title}</span>
+                    <span className="truncate max-w-[150px]">{payingComplaint?.title}</span>
                 </div>
                 <div className="border-t pt-2 mt-2">
-                    <p className="font-bold text-center mb-1 text-xs uppercase tracking-wider text-muted-foreground">Payment Instructions</p>
+                    <p className="font-bold text-center mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Payment Instructions</p>
                     <div className="flex justify-between">
                         <span>Method:</span>
                         <span className="font-semibold text-green-600">Easypaisa</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Account Number:</span>
+                        <span>Number:</span>
                         <span className="font-bold text-primary">03140500595</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Account Name:</span>
+                        <span>Name:</span>
                         <span className="font-semibold">Muhammad Hazique</span>
                     </div>
                 </div>
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="receipt">Upload Payment Receipt</Label>
+                <Label htmlFor="receipt" className="text-xs sm:text-sm">Upload Payment Receipt</Label>
                 {!receiptPreview ? (
                     <div className="flex items-center justify-center w-full">
-                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/20 transition-colors">
+                        <label className="flex flex-col items-center justify-center w-full h-24 sm:h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/20 transition-colors">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                                <p className="mb-2 text-sm text-muted-foreground">
+                                <Upload className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-muted-foreground" />
+                                <p className="mb-1 text-xs text-muted-foreground">
                                     <span className="font-semibold text-primary">Upload Receipt</span>
                                 </p>
-                                <p className="text-xs text-muted-foreground text-center px-4">Screenshot of Easypaisa transaction (Max 500KB)</p>
+                                <p className="text-[10px] text-muted-foreground text-center px-4">Max 500KB</p>
                             </div>
                             <input 
                                 id="receipt" 
@@ -327,11 +321,11 @@ export default function MyComplaintsPage() {
                         </label>
                     </div>
                 ) : (
-                    <div className="relative border rounded-lg p-2 bg-muted/20">
+                    <div className="relative border rounded-lg p-1 sm:p-2 bg-muted/20">
                         <Button
                             variant="destructive"
                             size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 z-10"
+                            className="absolute top-1 right-1 h-5 w-5 z-10"
                             onClick={clearReceipt}
                         >
                             <X className="h-3 w-3" />
@@ -348,11 +342,12 @@ export default function MyComplaintsPage() {
                 )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayingComplaint(null)}>Cancel</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setPayingComplaint(null)} className="w-full sm:w-auto">Cancel</Button>
             <Button 
                 onClick={handlePaymentSubmit} 
                 disabled={isProcessingPayment || !receiptPreview}
+                className="w-full sm:w-auto"
             >
                 {isProcessingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm Payment

@@ -1,4 +1,3 @@
-
 'use client';
 import { Briefcase, Plus, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -96,14 +95,14 @@ export default function TeachersPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title="Teacher Records"
         icon={Briefcase}
         description="View and manage teacher records."
       >
         {isAdmin && (
-          <Button onClick={() => router.push('/add-teacher')}>
+          <Button size="sm" onClick={() => router.push('/add-teacher')} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Teacher
           </Button>
@@ -123,85 +122,79 @@ export default function TeachersPage() {
             </div>
         </div>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Department</TableHead>
-                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-40" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-16" />
-                    </TableCell>
-                    {isAdmin && (
-                        <TableCell className="text-right">
-                            <Skeleton className="h-8 w-32 ml-auto" />
-                        </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              {!isLoading &&
-                filteredTeachers?.map((teacher) => (
-                  <TableRow key={teacher.id}>
-                    <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
-                    <TableCell>{teacher.email}</TableCell>
-                    <TableCell>
-                        <Badge variant="outline">
-                          {teacher.department}
-                        </Badge>
-                      </TableCell>
-                    {isAdmin && (
-                        <TableCell className="text-right space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
-                            Edit
-                          </Button>
-                          <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                      Delete
-                                  </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                          This action cannot be undone. This will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}.
-                                      </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDelete(teacher)} disabled={isDeleting === teacher.id}>
-                                        {isDeleting === teacher.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                        Continue
-                                      </AlertDialogAction>
-                                  </AlertDialogFooter>
-                              </AlertDialogContent>
-                          </AlertDialog>
-                        </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-                {!isLoading && filteredTeachers?.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center">
-                        No teachers found.
-                        </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">Name</TableHead>
+                  <TableHead className="min-w-[150px]">Email</TableHead>
+                  <TableHead className="min-w-[120px]">Department</TableHead>
+                  {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading &&
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      {isAdmin && <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>}
                     </TableRow>
-                )}
-            </TableBody>
-          </Table>
+                  ))}
+                {!isLoading &&
+                  filteredTeachers?.map((teacher) => (
+                    <TableRow key={teacher.id}>
+                      <TableCell className="font-medium">{`${teacher.firstName} ${teacher.lastName}`}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">{teacher.email}</TableCell>
+                      <TableCell>
+                          <Badge variant="outline" className="text-[10px] sm:text-xs">
+                            {teacher.department}
+                          </Badge>
+                        </TableCell>
+                      {isAdmin && (
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
+                                Edit
+                              </Button>
+                              <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="text-destructive h-8 px-2">
+                                          Delete
+                                      </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="w-[95vw] sm:max-w-md rounded-lg">
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                              This action will permanently delete the teacher record for {teacher.firstName} {teacher.lastName}.
+                                          </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(teacher)} disabled={isDeleting === teacher.id}>
+                                            {isDeleting === teacher.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                            Delete
+                                          </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {!isLoading && filteredTeachers?.length === 0 && (
+                      <TableRow>
+                          <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center">
+                          No teachers found.
+                          </TableCell>
+                      </TableRow>
+                  )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

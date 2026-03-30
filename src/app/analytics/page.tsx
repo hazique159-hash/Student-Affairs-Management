@@ -41,14 +41,14 @@ export default function AnalyticsPage() {
   const isLoading = isLoadingStudents || isLoadingTeachers || isLoadingComplaints;
 
   return (
-    <div className="flex flex-col gap-4 h-full max-h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col gap-4 h-full md:max-h-[calc(100vh-4rem)] overflow-y-auto md:overflow-hidden pb-10 md:pb-0">
       <PageHeader
         title="Analytics Dashboard"
         icon={BarChart2}
         className="shrink-0"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 shrink-0">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
             <CardTitle className="text-sm font-medium">
@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-[300px] md:min-h-0">
         <AnalyticsChart 
           students={students || []} 
           teachers={teachers || []} 

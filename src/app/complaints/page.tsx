@@ -134,7 +134,6 @@ export default function ComplaintsPage() {
             batch.update(studentRef, { complaintCount: increment(1) });
         }
 
-        // Update student portal copy
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
         if (!studentUserSnapshot.empty) {
@@ -143,7 +142,6 @@ export default function ComplaintsPage() {
             batch.update(studentComplaintRef, updateData);
         }
 
-        // Update filer copy
         if (complaint.filedById) {
             const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
             batch.update(filerComplaintRef, updateData);
@@ -204,27 +202,27 @@ export default function ComplaintsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <PageHeader title="Complaint Management" icon={ShieldQuestion} description="Review and approve student violations.">
-        <Button variant="outline" onClick={handleDownloadPDF} disabled={!filteredComplaints.length}>
+        <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={!filteredComplaints.length} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" /> Download PDF
         </Button>
       </PageHeader>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
                 <CardTitle>Complaint Inbox</CardTitle>
                 <CardDescription>View and manage all incoming violation reports.</CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-                <div className="relative w-full md:w-64">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input placeholder="Search..." className="pl-8" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full md:w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All</SelectItem>
                         <SelectItem value="Pending">Pending</SelectItem>
@@ -236,78 +234,79 @@ export default function ComplaintsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Violations</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Fine Status</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredComplaints.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <div className="font-medium">{c.studentName}</div>
-                    <div className="text-xs text-muted-foreground">{c.studentId}</div>
-                  </TableCell>
-                  <TableCell><Badge variant={(studentComplaintCounts[c.studentId] || 0) > 2 ? 'destructive' : 'outline'}>{studentComplaintCounts[c.studentId] || 0}</Badge></TableCell>
-                  <TableCell>{c.title}</TableCell>
-                  <TableCell>
-                     {c.status === 'Approved' && (
-                        <div className="flex items-center gap-2">
-                           <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
-                              {c.paymentStatus === 'Submitted' ? 'Paid - Review Needed' : 'Unpaid'}
-                           </Badge>
-                           {c.paymentReceiptUrl && (
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
-                                 <Eye className="h-4 w-4" />
-                              </Button>
-                           )}
-                        </div>
-                     )}
-                     {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Verified</Badge>}
-                  </TableCell>
-                  <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                        {c.status === 'Pending' && (
-                            <>
-                                <Button size="sm" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
-                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
-                            </>
-                        )}
-                        {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Verify & Resolve
-                            </Button>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(c)}>Details</Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
-                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                  </TableCell>
+        <CardContent className="px-0 sm:px-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[120px]">Student</TableHead>
+                  <TableHead>Count</TableHead>
+                  <TableHead className="min-w-[150px]">Violation</TableHead>
+                  <TableHead className="min-w-[120px]">Fine</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredComplaints.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <div className="font-medium truncate max-w-[100px]">{c.studentName}</div>
+                      <div className="text-xs text-muted-foreground">{c.studentId}</div>
+                    </TableCell>
+                    <TableCell><Badge variant={(studentComplaintCounts[c.studentId] || 0) > 2 ? 'destructive' : 'outline'}>{studentComplaintCounts[c.studentId] || 0}</Badge></TableCell>
+                    <TableCell className="max-w-[150px] truncate">{c.title}</TableCell>
+                    <TableCell>
+                      {c.status === 'Approved' && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
+                                {c.paymentStatus === 'Submitted' ? 'Submitted' : 'Unpaid'}
+                            </Badge>
+                            {c.paymentReceiptUrl && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                            )}
+                          </div>
+                      )}
+                      {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Verified</Badge>}
+                    </TableCell>
+                    <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                          {c.status === 'Pending' && (
+                              <div className="flex flex-col sm:flex-row gap-1">
+                                  <Button size="sm" className="h-8 px-2" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
+                                  <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
+                              </div>
+                          )}
+                          {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
+                              <Button size="sm" className="h-8 px-2 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
+                                  Verify
+                              </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setViewingComplaint(c)}>Details</Button>
+                          <AlertDialog>
+                              <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive h-8 w-8"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
+                                  <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Complaint Details Dialog */}
       {viewingComplaint && (
         <Dialog open={!!viewingComplaint} onOpenChange={() => setViewingComplaint(null)}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-lg">
                 <DialogHeader><DialogTitle>{viewingComplaint.title}</DialogTitle></DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-4">
                   <div className="space-y-4 py-4 text-sm">
@@ -335,7 +334,7 @@ export default function ComplaintsPage() {
       {/* Receipt View Dialog */}
       {viewingReceipt && (
         <Dialog open={!!viewingReceipt} onOpenChange={() => setViewingReceipt(null)}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] w-[95vw] rounded-lg">
                 <DialogHeader><DialogTitle>Payment Receipt</DialogTitle></DialogHeader>
                 <div className="relative aspect-[4/3] w-full bg-black rounded-lg overflow-hidden border">
                     <img src={viewingReceipt} alt="Payment Receipt" className="w-full h-full object-contain" />
