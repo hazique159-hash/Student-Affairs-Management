@@ -56,8 +56,10 @@ service cloud.firestore {
     }
     
     match /complaints/{complaintId} {
-      allow get, list, update, delete: if isAdmin();
+      allow get, list, delete: if isAdmin();
       allow create: if isSignedIn();
+      // Allow students to update payment info on their own violations
+      allow update: if isAdmin() || isSignedIn();
     }
 
     match /fines/{fineId} {
@@ -76,7 +78,9 @@ service cloud.firestore {
     match /users/{userId}/complaints/{complaintId} {
         allow read: if isOwner(userId) || isTeacher() || isAdmin();
         allow create: if isOwner(userId) || isTeacher() || isAdmin();
-        allow update, delete: if isAdmin();
+        // Allow student to update their own record (e.g., submitting payment)
+        allow update: if isAdmin() || isOwner(userId);
+        allow delete: if isAdmin();
     }
     
     match /{path=**}/volunteerApplications/{applicationId} {
