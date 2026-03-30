@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, doc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 
 export default function MyFinesPage() {
   const { user, isUserLoading } = useUser();
@@ -115,7 +115,7 @@ export default function MyFinesPage() {
                   </TableRow>
                 ))
               ) : fines && fines.length > 0 ? (
-                fines
+                [...fines]
                   .sort((a, b) => new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime())
                   .map((fine) => (
                   <TableRow key={fine.id}>

@@ -133,8 +133,8 @@ export default function ComplaintsPage() {
             batch.update(studentRef, { complaintCount: increment(1) });
 
             // Issue automatic fine in top-level centralized collection
-            const fineId = doc(collection(firestore, 'id_generator')).id;
-            const fineRef = doc(firestore, 'fines', fineId);
+            const fineRef = doc(collection(firestore, 'fines'));
+            const fineId = fineRef.id;
             
             const now = new Date();
             const dueDate = new Date();
