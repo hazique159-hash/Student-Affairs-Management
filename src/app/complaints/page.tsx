@@ -1,6 +1,5 @@
-
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download, Search, FilterX } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -20,7 +19,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Complaint, Student } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, writeBatch, doc, getDocs, where, increment } from 'firebase/firestore';
@@ -46,6 +44,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
@@ -57,9 +63,14 @@ export default function ComplaintsPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingComplaint, setViewingComplaint] = useState<Complaint | null>(null);
+  
+  // Filter States
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
@@ -87,6 +98,19 @@ export default function ComplaintsPage() {
       return acc;
     }, {} as Record<string, number>);
   }, [students]);
+
+  // Filtered Data Logic
+  const filteredComplaints = useMemo(() => {
+    if (!complaints) return [];
+    return complaints.filter((c) => {
+      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      const matchesSearch = 
+        c.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.title.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [complaints, statusFilter, searchTerm]);
 
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
@@ -191,7 +215,7 @@ export default function ComplaintsPage() {
   };
 
   const handleDownloadPDF = () => {
-    if (!complaints || complaints.length === 0) return;
+    if (!filteredComplaints || filteredComplaints.length === 0) return;
 
     const doc = new jsPDF();
     
@@ -203,8 +227,9 @@ export default function ComplaintsPage() {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
+    doc.text(`Filters: Status: ${statusFilter}, Search: ${searchTerm || 'None'}`, 14, 27);
 
-    const tableData = complaints.map((c) => [
+    const tableData = filteredComplaints.map((c) => [
       c.studentName,
       c.studentId,
       c.title,
@@ -214,7 +239,7 @@ export default function ComplaintsPage() {
     ]);
 
     autoTable(doc, {
-      startY: 30,
+      startY: 35,
       head: [['Student Name', 'Reg No', 'Violation', 'Teacher', 'Status', 'Date Submitted']],
       body: tableData,
       theme: 'striped',
@@ -235,6 +260,11 @@ export default function ComplaintsPage() {
     return url.startsWith('data:video/') || url.match(/\.(mp4|webm|ogg)$/i);
   };
 
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setSearchTerm('');
+  };
+
   if (isLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
@@ -246,20 +276,52 @@ export default function ComplaintsPage() {
         icon={ShieldQuestion}
         description="Review, approve, and manage all student complaints."
       >
-        {complaints && complaints.length > 0 && (
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={filteredComplaints.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
+        </div>
       </PageHeader>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Complaints</CardTitle>
-          <CardDescription>
-            Review, approve, and manage all student complaints.
-          </CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <CardTitle>Complaint Inbox</CardTitle>
+                <CardDescription>
+                    Filter and manage incoming student complaints.
+                </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search student or title..." 
+                        className="pl-8" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full md:w-[150px]">
+                        <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Resolved">Resolved</SelectItem>
+                    </SelectContent>
+                </Select>
+                {(statusFilter !== 'all' || searchTerm !== '') && (
+                    <Button variant="ghost" size="icon" onClick={resetFilters} title="Clear Filters">
+                        <FilterX className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -275,8 +337,8 @@ export default function ComplaintsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!isLoading && complaints && complaints.length > 0 ? (
-                complaints.map((complaint) => (
+              {filteredComplaints && filteredComplaints.length > 0 ? (
+                filteredComplaints.map((complaint) => (
                   <TableRow key={complaint.id}>
                     <TableCell>
                       <div className="font-medium">{complaint.studentName}</div>
@@ -354,13 +416,11 @@ export default function ComplaintsPage() {
                   </TableRow>
                 ))
               ) : (
-                !isLoading && (
-                  <TableRow>
+                <TableRow>
                     <TableCell colSpan={7} className="text-center h-24">
-                      There are no complaints at this time.
+                        {searchTerm || statusFilter !== 'all' ? 'No complaints match your filters.' : 'There are no complaints at this time.'}
                     </TableCell>
-                  </TableRow>
-                )
+                </TableRow>
               )}
             </TableBody>
           </Table>
