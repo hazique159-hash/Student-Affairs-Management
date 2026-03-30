@@ -126,8 +126,8 @@ export default function ComplaintsPage() {
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // Automated fine logic: If approving a previously pending/open complaint
-        if (newStatus === 'Approved' && complaint.status !== 'Approved') {
+        // Automated fine logic: If approving
+        if (newStatus === 'Approved') {
             // Increment master complaint count for student
             const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
