@@ -1,5 +1,5 @@
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download, Search, FilterX } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Search, Download } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -88,8 +88,6 @@ export default function ComplaintsPage() {
   );
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
 
-  const isLoading = isUserLoading || isLoadingComplaints || isLoadingStudents;
-
   const studentComplaintCounts = useMemo(() => {
     if (!students) return {};
     return students.reduce((acc, student) => {
@@ -114,7 +112,7 @@ export default function ComplaintsPage() {
     if (!isUserLoading && !isAdmin) {
       router.push('/announcements');
     }
-  }, [isUserLoading, user, isAdmin, router]);
+  }, [isUserLoading, isAdmin, router]);
 
   const handleStatusUpdate = async (complaint: Complaint, newStatus: 'Approved' | 'Rejected' | 'Resolved') => {
     if (!firestore || !isAdmin) return;
@@ -124,30 +122,25 @@ export default function ComplaintsPage() {
         const batch = writeBatch(firestore);
         const regId = complaint.studentId.toUpperCase();
 
-        // Find the student's portal UID
-        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
-        const studentUserSnapshot = await getDocs(studentUserQuery);
-
         // 1. Update master complaint
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // 2. Update filer's history if available
-        if (complaint.filedById) {
-          const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-          batch.update(filerComplaintRef, { status: newStatus });
-        }
+        // 2. Find student's UID mapping
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
+        const studentUserSnapshot = await getDocs(studentUserQuery);
+        const studentPortalFound = !studentUserSnapshot.empty;
 
-        let fineIssued = false;
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             // Increment master complaint count for student
             const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
 
-            if (!studentUserSnapshot.empty) {
-                const studentUserDoc = studentUserSnapshot.docs[0];
-                const fineId = doc(collection(firestore, 'fines')).id; // Use a dedicated collection for IDs
-                const fineRef = doc(firestore, `users/${studentUserDoc.id}/fines`, fineId);
+            // Issue automatic fine if portal account exists
+            if (studentPortalFound) {
+                const studentUid = studentUserSnapshot.docs[0].id;
+                const fineId = doc(collection(firestore, 'id_generator')).id;
+                const fineRef = doc(firestore, `users/${studentUid}/fines`, fineId);
                 
                 const now = new Date();
                 const dueDate = new Date();
@@ -162,23 +155,29 @@ export default function ComplaintsPage() {
                     dateDue: dueDate.toISOString(),
                     isPaid: false
                 });
-                fineIssued = true;
             }
         }
-        
-        // 3. Update student's portal view
-        if (!studentUserSnapshot.empty) {
-            const studentUserDoc = studentUserSnapshot.docs[0];
-            const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+
+        // 3. Update status in student's portal view if found
+        if (studentPortalFound) {
+            const studentUid = studentUserSnapshot.docs[0].id;
+            const studentComplaintRef = doc(firestore, `users/${studentUid}/complaints`, complaint.id);
             batch.update(studentComplaintRef, { status: newStatus });
+        }
+
+        // 4. Update status in filer's history if available
+        if (complaint.filedById) {
+            const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
+            batch.update(filerComplaintRef, { status: newStatus });
         }
         
         await batch.commit();
+        
         toast({
             title: `Complaint ${newStatus}`,
             description: newStatus === 'Approved' 
-                ? (fineIssued ? `Approved and Rs. 1000 fine issued to ${complaint.studentName}.` : `Approved for ${complaint.studentName}. (Portal account not found for automated fine)`)
-                : `The complaint status has been updated.`
+                ? `Approved for ${complaint.studentName}. ${studentPortalFound ? 'Rs. 1000 fine issued.' : '(Fine skip: No portal account found)'}`
+                : `The status has been updated.`
         });
 
     } catch (error: any) {
@@ -209,8 +208,8 @@ export default function ComplaintsPage() {
       const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId.toUpperCase()));
       const studentUserSnapshot = await getDocs(studentUserQuery);
       if (!studentUserSnapshot.empty) {
-          const studentUserDoc = studentUserSnapshot.docs[0];
-          const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
+          const studentUid = studentUserSnapshot.docs[0].id;
+          const studentComplaintRef = doc(firestore, `users/${studentUid}/complaints`, complaint.id);
           batch.delete(studentComplaintRef);
       }
       
@@ -259,7 +258,7 @@ export default function ComplaintsPage() {
     doc.save(`complaints-report.pdf`);
   };
 
-  if (isLoading || !isAdmin) {
+  if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
 

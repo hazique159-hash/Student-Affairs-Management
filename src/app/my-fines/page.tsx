@@ -83,7 +83,7 @@ export default function MyFinesPage() {
         <CardHeader>
           <CardTitle>Fine History</CardTitle>
           <CardDescription>
-            New fines of Rs. 1000 are automatically generated when a complaint against you is approved by the Student Affairs department.
+            A fine of Rs. 1000 is automatically generated when a complaint against you is approved by the Student Affairs department.
           </CardDescription>
         </CardHeader>
         <CardContent>
