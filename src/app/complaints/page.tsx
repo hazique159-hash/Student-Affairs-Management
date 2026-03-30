@@ -1,4 +1,3 @@
-
 'use client';
 import { ShieldQuestion, Loader2, Trash2, Search, Download } from 'lucide-react';
 import {
@@ -56,7 +55,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import jsPDF from 'jsPDF';
+import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function ComplaintsPage() {
@@ -127,12 +126,13 @@ export default function ComplaintsPage() {
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
+        // Automated fine logic: If approving a previously pending/open complaint
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             // Increment master complaint count for student
             const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
 
-            // Issue automatic fine in top-level collection
+            // Issue automatic fine in top-level centralized collection
             const fineId = doc(collection(firestore, 'id_generator')).id;
             const fineRef = doc(firestore, 'fines', fineId);
             
@@ -151,7 +151,7 @@ export default function ComplaintsPage() {
             });
         }
 
-        // 2. Update status in student's portal view if found via email-based regId
+        // 2. Sync with student's personal portal history via subcollection
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
         if (!studentUserSnapshot.empty) {
@@ -160,7 +160,7 @@ export default function ComplaintsPage() {
             batch.update(studentComplaintRef, { status: newStatus });
         }
 
-        // 3. Update status in filer's history if available
+        // 3. Update status in filer's history (if any)
         if (complaint.filedById) {
             const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
             batch.update(filerComplaintRef, { status: newStatus });
@@ -258,131 +258,129 @@ export default function ComplaintsPage() {
   }
 
   return (
-    <>
-      <div className="space-y-8">
-        <PageHeader
-          title="Complaint Management"
-          icon={ShieldQuestion}
-          description="Review, approve, and manage all student complaints."
-        >
-          <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleDownloadPDF} disabled={filteredComplaints.length === 0}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-              </Button>
-          </div>
-        </PageHeader>
+    <div className="space-y-8">
+      <PageHeader
+        title="Complaint Management"
+        icon={ShieldQuestion}
+        description="Review, approve, and manage all student complaints."
+      >
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownloadPDF} disabled={filteredComplaints.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
+        </div>
+      </PageHeader>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                  <CardTitle>Complaint Inbox</CardTitle>
-                  <CardDescription>Filter and manage incoming student complaints.</CardDescription>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative w-full md:w-64">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                          placeholder="Search student or title..." 
-                          className="pl-8" 
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full md:w-[150px]">
-                          <SelectValue placeholder="All Statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="Pending">Pending</SelectItem>
-                          <SelectItem value="Approved">Approved</SelectItem>
-                          <SelectItem value="Rejected">Rejected</SelectItem>
-                          <SelectItem value="Resolved">Resolved</SelectItem>
-                      </SelectContent>
-                  </Select>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <CardTitle>Complaint Inbox</CardTitle>
+                <CardDescription>Filter and manage incoming student complaints.</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Violations</TableHead>
-                  <TableHead>Teacher/User</TableHead>
-                  <TableHead>Violation Title</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredComplaints.length > 0 ? (
-                  filteredComplaints.map((complaint) => (
-                    <TableRow key={complaint.id}>
-                      <TableCell>
-                        <div className="font-medium">{complaint.studentName}</div>
-                        <div className="text-sm text-muted-foreground">{complaint.studentId}</div>
-                      </TableCell>
-                      <TableCell>
-                          <Badge variant={(studentComplaintCounts[complaint.studentId] ?? 0) > 2 ? 'destructive' : 'outline'}>
-                              {studentComplaintCounts[complaint.studentId] ?? 0}
-                          </Badge>
-                      </TableCell>
-                      <TableCell>{complaint.filedByName}</TableCell>
-                      <TableCell>{complaint.title}</TableCell>
-                      <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
-                      <TableCell>
-                          <Badge variant={complaint.status === 'Rejected' ? 'destructive' : complaint.status === 'Resolved' ? 'secondary' : complaint.status === 'Approved' ? 'default' : 'outline'}>
-                              {complaint.status}
-                          </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                         <div className="flex items-center justify-end gap-2">
-                          {complaint.status === 'Pending' && (
-                              <>
-                                  <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
-                                     {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
-                                     Reject
-                                  </Button>
-                              </>
-                            )}
-                            <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View</Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={deletingId === complaint.id}>
-                                    {deletingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin"/> :<Trash2 className="h-4 w-4" />}
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>Permanently delete this complaint?</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(complaint)} disabled={deletingId === complaint.id}>
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No complaints found.</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search student or title..." 
+                        className="pl-8" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full md:w-[150px]">
+                        <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                        <SelectItem value="Resolved">Resolved</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Violations</TableHead>
+                <TableHead>Teacher/User</TableHead>
+                <TableHead>Violation Title</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredComplaints.length > 0 ? (
+                filteredComplaints.map((complaint) => (
+                  <TableRow key={complaint.id}>
+                    <TableCell>
+                      <div className="font-medium">{complaint.studentName}</div>
+                      <div className="text-sm text-muted-foreground">{complaint.studentId}</div>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={(studentComplaintCounts[complaint.studentId] ?? 0) > 2 ? 'destructive' : 'outline'}>
+                            {studentComplaintCounts[complaint.studentId] ?? 0}
+                        </Badge>
+                    </TableCell>
+                    <TableCell>{complaint.filedByName}</TableCell>
+                    <TableCell>{complaint.title}</TableCell>
+                    <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>
+                        <Badge variant={complaint.status === 'Rejected' ? 'destructive' : complaint.status === 'Resolved' ? 'secondary' : complaint.status === 'Approved' ? 'default' : 'outline'}>
+                            {complaint.status}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <div className="flex items-center justify-end gap-2">
+                        {complaint.status === 'Pending' && (
+                            <>
+                                <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
+                                   {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
+                                   Reject
+                                </Button>
+                            </>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View</Button>
+                          <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={deletingId === complaint.id}>
+                                  {deletingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin"/> :<Trash2 className="h-4 w-4" />}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>Permanently delete this complaint?</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(complaint)} disabled={deletingId === complaint.id}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                       </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No complaints found.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {viewingComplaint && (
         <Dialog open={!!viewingComplaint} onOpenChange={(isOpen) => !isOpen && setViewingComplaint(null)}>
@@ -422,6 +420,6 @@ export default function ComplaintsPage() {
             </DialogContent>
         </Dialog>
       )}
-    </>
+    </div>
   );
 }

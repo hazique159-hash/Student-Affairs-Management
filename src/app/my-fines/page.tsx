@@ -1,4 +1,3 @@
-
 'use client';
 import { CircleDollarSign, Loader2 } from 'lucide-react';
 import {
@@ -44,6 +43,7 @@ export default function MyFinesPage() {
   // Derive registration number from email (e.g., BCS223089@student.com -> BCS223089)
   const myRegNo = user?.email?.split('@')[0].toUpperCase();
 
+  // Fetch fines from the top-level collection where studentId matches
   const finesRef = useMemoFirebase(
     () => (firestore && myRegNo ? query(collection(firestore, 'fines'), where('studentId', '==', myRegNo)) : null),
     [firestore, myRegNo]
