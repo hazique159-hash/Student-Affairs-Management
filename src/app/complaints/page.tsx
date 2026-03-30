@@ -1,4 +1,3 @@
-
 'use client';
 import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download, Search, FilterX } from 'lucide-react';
 import {
@@ -168,7 +167,7 @@ export default function ComplaintsPage() {
               toast({
                 variant: 'destructive',
                 title: 'No Student Account',
-                description: `Could not issue fine because ${complaint.studentId} has not logged into the portal yet.`
+                description: `Could not issue fine because ${complaint.studentId} user record was not found.`
               });
             }
         }
@@ -270,10 +269,10 @@ export default function ComplaintsPage() {
 
     autoTable(doc, {
       startY: 35,
-      head: [['Student Name', 'Reg No', 'Violation', 'Teacher', 'Status', 'Date Submitted']],
+      head: [['Student Name', 'Reg No', 'Violation', 'Teacher/User', 'Status', 'Date Submitted']],
       body: tableData,
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] }, // Primary color
+      headStyles: { fillColor: [59, 130, 246] },
       styles: { fontSize: 8 },
     });
 
@@ -296,7 +295,11 @@ export default function ComplaintsPage() {
   };
 
   if (isLoading || !isAdmin) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -359,7 +362,7 @@ export default function ComplaintsPage() {
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>Total Violations</TableHead>
-                <TableHead>Teacher</TableHead>
+                <TableHead>Teacher/User</TableHead>
                 <TableHead>Violation Title</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
@@ -407,7 +410,7 @@ export default function ComplaintsPage() {
                                 <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Rejected')} disabled={updatingId === complaint.id}>
                                    Reject
                                 </Button>
-                            </<>
+                            </>
                           )}
                           {complaint.status === 'Approved' && isAdmin && (
                             <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Resolved')} disabled={updatingId === complaint.id}>
