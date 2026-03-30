@@ -1,3 +1,4 @@
+
 'use client';
 import { MessageSquareHeart, Plus, Loader2 } from 'lucide-react';
 import {
@@ -52,7 +53,7 @@ export default function MyComplaintsPage() {
 
   const pageTitle = isStudent ? "Complaint Records" : "My Complaints";
   const pageDescription = isStudent
-    ? "A record of all approved complaints filed against you."
+    ? "A record of all complaints filed against you."
     : "A record of all complaints you have filed.";
 
   return (
@@ -112,11 +113,13 @@ export default function MyComplaintsPage() {
                     <TableCell className="text-right">
                        <Badge
                         variant={
-                          complaint.status === 'Rejected' || complaint.status === 'Resolved'
+                          complaint.status === 'Rejected'
+                            ? 'destructive'
+                            : complaint.status === 'Resolved'
                             ? 'secondary'
                             : complaint.status === 'Approved'
                             ? 'default'
-                            : 'destructive'
+                            : 'outline'
                         }
                       >
                         {complaint.status}

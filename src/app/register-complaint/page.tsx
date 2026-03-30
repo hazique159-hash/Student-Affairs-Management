@@ -40,6 +40,9 @@ import {
   doc,
   getDoc,
   serverTimestamp,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore';
 import type { Student, Teacher } from '@/lib/types';
 import { useState, useRef } from 'react';
@@ -239,11 +242,21 @@ export default function RegisterComplaintPage() {
       );
       batch.set(userComplaintRef, complaintData);
 
+      // 3. Write to the target student's portal for immediate visibility
+      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
+      const studentUserSnapshot = await getDocs(studentUserQuery);
+
+      if (!studentUserSnapshot.empty) {
+          const studentUserDoc = studentUserSnapshot.docs[0];
+          const studentPortalRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaintId);
+          batch.set(studentPortalRef, complaintData);
+      }
+
       await batch.commit();
 
       toast({
         title: 'Complaint Submitted',
-        description: 'Your complaint has been filed and is pending review.',
+        description: 'Your complaint has been filed and is visible on relevant portals.',
       });
 
       router.push('/my-complaints');

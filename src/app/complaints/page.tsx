@@ -1,3 +1,4 @@
+
 'use client';
 import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film, Download, Search, FilterX } from 'lucide-react';
 import {
@@ -125,39 +126,38 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
 
+        // 1. Update master collection
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
+        // 2. Update filer's history
         const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
         batch.update(filerComplaintRef, { status: newStatus });
 
+        // 3. Update student metrics
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             const studentRef = doc(firestore, 'students', complaint.studentId);
             batch.update(studentRef, { complaintCount: increment(1) });
+        } else if (complaint.status === 'Approved' && (newStatus === 'Rejected' || newStatus === 'Resolved')) {
+             // Optional: If resolved or rejected after approval, maybe decrement? 
+             // Usually approved stays in count, but let's keep it simple.
         }
         
+        // 4. Update student's portal portal copy
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
         if (!studentUserSnapshot.empty) {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
-
-            if (newStatus === 'Approved') {
-                batch.set(studentComplaintRef, {
-                    ...complaint,
-                    status: newStatus,
-                    dateSubmitted: complaint.dateSubmitted,
-                });
-            } else if (newStatus === 'Resolved' && complaint.status === 'Approved') {
-                batch.update(studentComplaintRef, { status: newStatus });
-            }
+            // Use update since it already exists from filing time
+            batch.update(studentComplaintRef, { status: newStatus });
         }
         
         await batch.commit();
         toast({
             title: `Complaint ${newStatus}`,
-            description: `The complaint has been marked as ${newStatus.toLowerCase()}.`
+            description: `The complaint status has been synchronized across all portals.`
         });
 
     } catch (error: any) {
