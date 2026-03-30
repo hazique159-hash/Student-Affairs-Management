@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquareHeart, Plus, Loader2, CircleDollarSign } from 'lucide-react';
+import { MessageSquareHeart, Plus, Loader2, CircleDollarSign, Upload, X } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -21,18 +21,35 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import type { Complaint } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { collection, query, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch, where, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Image from 'next/image';
+
+const MAX_RECEIPT_SIZE = 500 * 1024; // 500KB
 
 export default function MyComplaintsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const [payingId, setPayingId] = useState<string | null>(null);
+  
+  const [payingComplaint, setPayingComplaint] = useState<Complaint | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -49,32 +66,79 @@ export default function MyComplaintsPage() {
   );
   const { data: complaints, isLoading: isLoadingComplaints } = useCollection<Complaint>(complaintsRef);
 
-  const handlePayFine = async (complaint: Complaint) => {
-    if (!firestore || !user) return;
-    setPayingId(complaint.id);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_RECEIPT_SIZE) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Receipt must be smaller than 500KB.',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setReceiptPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearReceipt = () => {
+    setReceiptPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!firestore || !user || !payingComplaint || !receiptPreview) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please upload a payment receipt.',
+      });
+      return;
+    }
+
+    setIsProcessingPayment(true);
 
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Update personal complaint status
-        const personalRef = doc(firestore, `users/${user.uid}/complaints`, complaint.id);
-        batch.update(personalRef, { status: 'Resolved' });
+        // 1. Update personal complaint status and attach receipt
+        const personalRef = doc(firestore, `users/${user.uid}/complaints`, payingComplaint.id);
+        batch.update(personalRef, { 
+            status: 'Resolved',
+            paymentReceiptUrl: receiptPreview 
+        });
         
         // 2. Update master complaint status
-        const masterRef = doc(firestore, 'complaints', complaint.id);
-        batch.update(masterRef, { status: 'Resolved' });
+        const masterRef = doc(firestore, 'complaints', payingComplaint.id);
+        batch.update(masterRef, { 
+            status: 'Resolved',
+            paymentReceiptUrl: receiptPreview
+        });
 
-        // 3. Update filer's record if they are not system
-        if (complaint.filedById && complaint.filedById !== 'system') {
-            const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
-            batch.update(filerComplaintRef, { status: 'Resolved' });
+        // 3. Update filer's record
+        if (payingComplaint.filedById && payingComplaint.filedById !== 'system') {
+            const filerComplaintRef = doc(firestore, `users/${payingComplaint.filedById}/complaints`, payingComplaint.id);
+            batch.update(filerComplaintRef, { 
+                status: 'Resolved',
+                paymentReceiptUrl: receiptPreview
+            });
         }
 
         await batch.commit();
+        
         toast({
-            title: 'Fine Paid Successfully',
-            description: 'The complaint has been marked as resolved.',
+            title: 'Payment Submitted',
+            description: 'Your fine has been paid and the record is resolved.',
         });
+        
+        setPayingComplaint(null);
+        setReceiptPreview(null);
     } catch (error: any) {
         toast({
             variant: 'destructive',
@@ -82,7 +146,7 @@ export default function MyComplaintsPage() {
             description: error.message || 'Could not process the fine payment.',
         });
     } finally {
-        setPayingId(null);
+        setIsProcessingPayment(false);
     }
   };
 
@@ -166,19 +230,16 @@ export default function MyComplaintsPage() {
                        {isStudent && complaint.status === 'Approved' ? (
                          <Button 
                             size="sm" 
-                            onClick={() => handlePayFine(complaint)} 
-                            disabled={payingId === complaint.id}
+                            onClick={() => setPayingComplaint(complaint)} 
                             className="bg-green-600 hover:bg-green-700"
                          >
-                            {payingId === complaint.id ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <CircleDollarSign className="mr-2 h-4 w-4" />
-                            )}
+                            <CircleDollarSign className="mr-2 h-4 w-4" />
                             Pay Fine
                          </Button>
                        ) : (
-                         <span className="text-xs text-muted-foreground italic">No action needed</span>
+                         <span className="text-xs text-muted-foreground italic">
+                            {complaint.status === 'Resolved' ? 'Paid' : 'No action'}
+                         </span>
                        )}
                     </TableCell>
                   </TableRow>
@@ -194,6 +255,104 @@ export default function MyComplaintsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      <Dialog open={!!payingComplaint} onOpenChange={(open) => {
+        if (!open) {
+            setPayingComplaint(null);
+            setReceiptPreview(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Fine Payment</DialogTitle>
+            <DialogDescription>
+              Complete your payment via Easypaisa to resolve this complaint.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2 text-sm border">
+                <div className="flex justify-between">
+                    <span className="font-medium">Fine Amount:</span>
+                    <span className="text-primary font-bold">Rs. 1000</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="font-medium">Violation:</span>
+                    <span className="truncate max-w-[200px]">{payingComplaint?.title}</span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                    <p className="font-bold text-center mb-1">Payment Details</p>
+                    <div className="flex justify-between">
+                        <span>Method:</span>
+                        <span className="font-semibold">Easypaisa</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Account No:</span>
+                        <span className="font-semibold text-primary">03140500595</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Account Name:</span>
+                        <span className="font-semibold">Muhammad Hazique</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="receipt">Upload Payment Receipt</Label>
+                {!receiptPreview ? (
+                    <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/20 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground">
+                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG or PDF (MAX. 500KB)</p>
+                            </div>
+                            <input 
+                                id="receipt" 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*" 
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                            />
+                        </label>
+                    </div>
+                ) : (
+                    <div className="relative border rounded-lg p-2 bg-muted/20">
+                        <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 z-10"
+                            onClick={clearReceipt}
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                            <Image
+                                src={receiptPreview}
+                                alt="Receipt Preview"
+                                fill
+                                className="object-contain bg-black"
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayingComplaint(null)}>Cancel</Button>
+            <Button 
+                onClick={handlePaymentSubmit} 
+                disabled={isProcessingPayment || !receiptPreview}
+            >
+                {isProcessingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
