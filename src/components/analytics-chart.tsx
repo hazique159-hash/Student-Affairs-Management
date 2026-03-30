@@ -56,16 +56,9 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
   const chartData = useMemo(() => {
     if (isLoading) return [];
 
-    // Filter students by department
     const deptStudents = students.filter(s => s.department === selectedDepartment);
-    
-    // Filter teachers by department
     const deptTeachers = teachers.filter(t => t.department === selectedDepartment);
-    
-    // Create a set of student IDs for this department for quick lookup
     const deptStudentIds = new Set(deptStudents.map(s => s.id));
-    
-    // Filter complaints based on whether the student involved belongs to the selected department
     const deptComplaints = complaints.filter(c => deptStudentIds.has(c.studentId));
 
     return [
@@ -79,20 +72,20 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
   }, [selectedDepartment, students, teachers, complaints, isLoading]);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <Card className="w-full h-full flex flex-col">
+      <CardHeader className="py-3">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div>
-            <CardTitle>Department Insights</CardTitle>
-            <CardDescription>Metrics comparison for the selected department.</CardDescription>
+            <CardTitle className="text-lg">Department Insights</CardTitle>
+            <CardDescription className="text-xs">Metrics for the selected department.</CardDescription>
           </div>
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-[200px] h-8 text-xs">
               <SelectValue placeholder="Select Department" />
             </SelectTrigger>
             <SelectContent>
               {DEPARTMENTS.map((dept) => (
-                <SelectItem key={dept} value={dept}>
+                <SelectItem key={dept} value={dept} className="text-xs">
                   {dept}
                 </SelectItem>
               ))}
@@ -100,43 +93,43 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="flex-1 min-h-0 pt-0 pb-4 px-2">
         {isLoading ? (
-          <div className="flex h-[300px] items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
                   dataKey="category" 
                   hide 
                 />
-                <YAxis />
+                <YAxis fontSize={12} width={30} />
                 <Tooltip content={<ChartTooltipContent />} />
-                <Legend />
+                <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
                 <Bar 
-                  name="Students Enrolled"
+                  name="Students"
                   dataKey="students" 
                   fill="var(--color-students)" 
                   radius={[4, 4, 0, 0]} 
-                  barSize={60}
+                  barSize={40}
                 />
                 <Bar 
-                  name="Total Teachers"
+                  name="Teachers"
                   dataKey="teachers" 
                   fill="var(--color-teachers)" 
                   radius={[4, 4, 0, 0]} 
-                  barSize={60}
+                  barSize={40}
                 />
                 <Bar 
-                  name="Department Complaints"
+                  name="Complaints"
                   dataKey="complaints" 
                   fill="var(--color-complaints)" 
                   radius={[4, 4, 0, 0]} 
-                  barSize={60}
+                  barSize={40}
                 />
               </BarChart>
             </ResponsiveContainer>

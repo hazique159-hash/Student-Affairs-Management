@@ -41,94 +41,84 @@ export default function AnalyticsPage() {
   const isLoading = isLoadingStudents || isLoadingTeachers || isLoadingComplaints;
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-4 h-full max-h-[calc(100vh-4rem)] overflow-hidden">
       <PageHeader
         title="Analytics Dashboard"
         icon={BarChart2}
-        description="Visual representations of student affairs data."
+        className="shrink-0"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 shrink-0">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
             <CardTitle className="text-sm font-medium">
               Total Students
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingStudents ? (
                <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              <div className="text-2xl font-bold">{students?.length ?? 0}</div>
+              <div className="text-xl font-bold">{students?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Total enrolled students.
-            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
             <CardTitle className="text-sm font-medium">
               Total Teachers
             </CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingTeachers ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              <div className="text-2xl font-bold">{teachers?.length ?? 0}</div>
+              <div className="text-xl font-bold">{teachers?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Total faculty members.
-            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
             <CardTitle className="text-sm font-medium">
               Total Complaints
             </CardTitle>
             <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingComplaints ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              <div className="text-2xl font-bold">{complaints?.length ?? 0}</div>
+              <div className="text-xl font-bold">{complaints?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Total filed complaints.
-            </p>
           </CardContent>
         </Card>
         <Card className="bg-red-200 border-red-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4">
             <CardTitle className="text-sm font-medium text-black">
               Pending Complaints
             </CardTitle>
             <Clock className="h-4 w-4 text-black" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingComplaints ? (
               <Loader2 className="h-6 w-6 animate-spin text-black" />
             ) : (
-              <div className="text-2xl font-bold text-black">{pendingComplaintsCount}</div>
+              <div className="text-xl font-bold text-black">{pendingComplaintsCount}</div>
             )}
-            <p className="text-xs text-black/70">
-              Awaiting admin review.
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      <AnalyticsChart 
-        students={students || []} 
-        teachers={teachers || []} 
-        complaints={complaints || []}
-        isLoading={isLoading}
-      />
+      <div className="flex-1 min-h-0">
+        <AnalyticsChart 
+          students={students || []} 
+          teachers={teachers || []} 
+          complaints={complaints || []}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }
