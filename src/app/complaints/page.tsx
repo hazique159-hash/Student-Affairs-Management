@@ -1,5 +1,6 @@
+
 'use client';
-import { ShieldQuestion, Loader2, Trash2 } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Image as ImageIcon, Film } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -46,6 +47,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import Image from 'next/image';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
@@ -190,6 +193,10 @@ export default function ComplaintsPage() {
     }
   };
 
+  const isVideo = (url?: string) => {
+    if (!url) return false;
+    return url.startsWith('data:video/') || url.match(/\.(mp4|webm|ogg)$/i);
+  };
 
   if (isLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
@@ -330,7 +337,7 @@ export default function ComplaintsPage() {
 
       {viewingComplaint && (
         <Dialog open={!!viewingComplaint} onOpenChange={(isOpen) => !isOpen && setViewingComplaint(null)}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>{viewingComplaint.title}</DialogTitle>
                     <DialogDescription>
@@ -338,25 +345,59 @@ export default function ComplaintsPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <Separator />
-                <div className="grid gap-4 py-4 text-sm">
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Student</span>
-                        <span className="col-span-2">{viewingComplaint.studentName} ({viewingComplaint.studentId})</span>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Filed By</span>
-                        <span className="col-span-2">{viewingComplaint.filedByName}</span>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Status</span>
-                        <span className="col-span-2"><Badge variant={viewingComplaint.status === 'Rejected' ? 'destructive' : viewingComplaint.status === 'Resolved' ? 'secondary' : viewingComplaint.status === 'Approved' ? 'default' : 'outline'}>{viewingComplaint.status}</Badge></span>
-                    </div>
-                     <Separator />
-                    <div>
-                        <p className="font-semibold mb-2 text-muted-foreground">Description</p>
-                        <p className="whitespace-pre-wrap">{viewingComplaint.description}</p>
-                    </div>
-                </div>
+                <ScrollArea className="max-h-[60vh] pr-4">
+                  <div className="grid gap-4 py-4 text-sm">
+                      <div className="grid grid-cols-3 items-center gap-4">
+                          <span className="font-semibold text-muted-foreground">Student</span>
+                          <span className="col-span-2">{viewingComplaint.studentName} ({viewingComplaint.studentId})</span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                          <span className="font-semibold text-muted-foreground">Filed By</span>
+                          <span className="col-span-2">{viewingComplaint.filedByName}</span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                          <span className="font-semibold text-muted-foreground">Status</span>
+                          <span className="col-span-2"><Badge variant={viewingComplaint.status === 'Rejected' ? 'destructive' : viewingComplaint.status === 'Resolved' ? 'secondary' : viewingComplaint.status === 'Approved' ? 'default' : 'outline'}>{viewingComplaint.status}</Badge></span>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                          <p className="font-semibold mb-2 text-muted-foreground">Description</p>
+                          <p className="whitespace-pre-wrap">{viewingComplaint.description}</p>
+                      </div>
+
+                      {viewingComplaint.evidenceUrl && (
+                        <>
+                          <Separator />
+                          <div>
+                            <p className="font-semibold mb-3 text-muted-foreground flex items-center gap-2">
+                              {isVideo(viewingComplaint.evidenceUrl) ? <Film className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
+                              Attached Evidence
+                            </p>
+                            <div className="relative border rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                              {isVideo(viewingComplaint.evidenceUrl) ? (
+                                <video 
+                                  src={viewingComplaint.evidenceUrl} 
+                                  controls 
+                                  className="max-h-[300px] w-full"
+                                />
+                              ) : (
+                                <div className="relative aspect-video w-full h-[250px]">
+                                  <Image
+                                    src={viewingComplaint.evidenceUrl}
+                                    alt="Complaint Evidence"
+                                    fill
+                                    className="object-contain"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                  </div>
+                </ScrollArea>
                 <DialogFooter>
                     <Button onClick={() => setViewingComplaint(null)}>Close</Button>
                 </DialogFooter>

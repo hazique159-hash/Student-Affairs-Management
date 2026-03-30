@@ -303,6 +303,11 @@
           "type": "string",
           "description": "Date the complaint was submitted.",
           "format": "date-time"
+        },
+        "evidenceUrl": {
+          "type": "string",
+          "description": "Optional data URI for image or video evidence.",
+          "format": "uri"
         }
       },
       "required": [

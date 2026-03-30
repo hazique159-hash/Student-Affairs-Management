@@ -1,5 +1,6 @@
+
 'use client';
-import { PenSquare, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { PenSquare, Loader2, Check, ChevronsUpDown, Paperclip, X, Image as ImageIcon, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -22,6 +23,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Popover,
@@ -40,8 +42,11 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import type { Student, Teacher } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const complaintSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -49,6 +54,7 @@ const complaintSchema = z.object({
     .string()
     .min(20, { message: 'Description must be at least 20 characters.' }),
   studentId: z.string().optional(),
+  evidenceUrl: z.string().optional(),
 });
 
 export default function RegisterComplaintPage() {
@@ -57,6 +63,9 @@ export default function RegisterComplaintPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [evidencePreview, setEvidencePreview] = useState<string | null>(null);
+  const [evidenceType, setEvidenceType] = useState<'image' | 'video' | null>(null);
 
   const isTeacher =
     user?.email &&
@@ -90,8 +99,51 @@ export default function RegisterComplaintPage() {
       title: '',
       description: '',
       studentId: undefined,
+      evidenceUrl: '',
     },
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Evidence must be smaller than 5MB.',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
+    if (!type) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file type',
+        description: 'Please upload an image or video.',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setEvidencePreview(base64);
+      setEvidenceType(type);
+      form.setValue('evidenceUrl', base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeEvidence = () => {
+    setEvidencePreview(null);
+    setEvidenceType(null);
+    form.setValue('evidenceUrl', '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const onSubmit = async (values: z.infer<typeof complaintSchema>) => {
     if (!firestore || !user) {
@@ -172,6 +224,7 @@ export default function RegisterComplaintPage() {
         filedByName: filedByName,
         status: 'Pending' as const,
         dateSubmitted: serverTimestamp(),
+        evidenceUrl: values.evidenceUrl || null,
       };
 
       // 1. Write to the global collection for admin/teacher review
@@ -340,6 +393,69 @@ export default function RegisterComplaintPage() {
                   </FormItem>
                 )}
               />
+
+              {/* Optional Evidence Section */}
+              <div className="space-y-4">
+                <FormLabel>Evidence (Optional Proof)</FormLabel>
+                <FormDescription>
+                  Upload an image or video as proof for your complaint. Max size 5MB.
+                </FormDescription>
+                
+                {!evidencePreview ? (
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full border-dashed"
+                    >
+                      <Paperclip className="mr-2 h-4 w-4" />
+                      Attach Image or Video
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*,video/*"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative border rounded-lg p-2 bg-muted/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        {evidenceType === 'image' ? <ImageIcon className="h-4 w-4" /> : <Film className="h-4 w-4" />}
+                        {evidenceType === 'image' ? 'Image Attached' : 'Video Attached'}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeEvidence}
+                        className="h-8 w-8 p-0 text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {evidenceType === 'image' ? (
+                      <div className="relative aspect-video w-full">
+                        <Image
+                          src={evidencePreview}
+                          alt="Evidence Preview"
+                          fill
+                          className="rounded-md object-contain bg-black"
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        src={evidencePreview}
+                        controls
+                        className="w-full rounded-md max-h-[300px] bg-black"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
             <CardFooter className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>

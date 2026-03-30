@@ -76,6 +76,7 @@ export type Complaint = {
   dateSubmitted: any;
   filedById: string;
   filedByName: string;
+  evidenceUrl?: string;
 };
 
 export type TeacherAvailability = {
