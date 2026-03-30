@@ -68,7 +68,6 @@ export default function ComplaintsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingComplaint, setViewingComplaint] = useState<Complaint | null>(null);
   
-  // Filter States
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -99,7 +98,6 @@ export default function ComplaintsPage() {
     }, {} as Record<string, number>);
   }, [students]);
 
-  // Filtered Data Logic
   const filteredComplaints = useMemo(() => {
     if (!complaints) return [];
     return complaints.filter((c) => {
@@ -125,26 +123,21 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Find student's user account to sync data
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', complaint.studentId.toUpperCase()));
         const studentUserSnapshot = await getDocs(studentUserQuery);
 
-        // 2. Update master collection
         const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
         batch.update(masterComplaintRef, { status: newStatus });
 
-        // 3. Update filer's history (if not self-filed)
         if (complaint.filedById) {
           const filerComplaintRef = doc(firestore, `users/${complaint.filedById}/complaints`, complaint.id);
           batch.update(filerComplaintRef, { status: newStatus });
         }
 
-        // 4. Update student metrics and ISSUE FINE if approved
         if (newStatus === 'Approved' && complaint.status !== 'Approved') {
             const studentRef = doc(firestore, 'students', complaint.studentId);
             batch.update(studentRef, { complaintCount: increment(1) });
 
-            // Automatically issue a Rs. 1000 fine on approval
             if (!studentUserSnapshot.empty) {
                 const studentUserDoc = studentUserSnapshot.docs[0];
                 const fineId = doc(collection(firestore, 'id_generator')).id;
@@ -152,7 +145,7 @@ export default function ComplaintsPage() {
                 
                 const now = new Date();
                 const dueDate = new Date();
-                dueDate.setDate(now.getDate() + 30); // 30 days to pay
+                dueDate.setDate(now.getDate() + 30);
 
                 batch.set(fineRef, {
                     id: fineId,
@@ -163,16 +156,9 @@ export default function ComplaintsPage() {
                     dateDue: dueDate.toISOString(),
                     isPaid: false
                 });
-            } else {
-              toast({
-                variant: 'destructive',
-                title: 'No Student Account Found',
-                description: `Complaint approved, but fine could not be issued to ${complaint.studentId} because their portal account record is missing.`
-              });
             }
         }
         
-        // 5. Update student's portal copy
         if (!studentUserSnapshot.empty) {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentComplaintRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaint.id);
@@ -204,7 +190,6 @@ export default function ComplaintsPage() {
 
     try {
       const batch = writeBatch(firestore);
-
       const masterComplaintRef = doc(firestore, 'complaints', complaint.id);
       batch.delete(masterComplaintRef);
 
@@ -245,19 +230,13 @@ export default function ComplaintsPage() {
 
   const handleDownloadPDF = () => {
     if (!filteredComplaints || filteredComplaints.length === 0) return;
-
     const doc = new jsPDF();
-    
-    // Header
     doc.setFontSize(20);
     doc.setTextColor(40, 40, 40);
     doc.text('AffairsConnect - Student Complaints Report', 14, 15);
-    
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 22);
-    doc.text(`Filters: Status: ${statusFilter}, Search: ${searchTerm || 'None'}`, 14, 27);
-
     const tableData = filteredComplaints.map((c) => [
       c.studentName,
       c.studentId,
@@ -266,7 +245,6 @@ export default function ComplaintsPage() {
       c.status,
       c.dateSubmitted?.seconds ? format(new Date(c.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'
     ]);
-
     autoTable(doc, {
       startY: 35,
       head: [['Student Name', 'Reg No', 'Violation', 'Teacher/User', 'Status', 'Date Submitted']],
@@ -275,13 +253,7 @@ export default function ComplaintsPage() {
       headStyles: { fillColor: [59, 130, 246] },
       styles: { fontSize: 8 },
     });
-
     doc.save(`complaints-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-    
-    toast({
-      title: 'PDF Generated',
-      description: 'Your report has been downloaded.',
-    });
   };
 
   const isVideo = (url?: string) => {
@@ -289,17 +261,8 @@ export default function ComplaintsPage() {
     return url.startsWith('data:video/') || url.match(/\.(mp4|webm|ogg)$/i);
   };
 
-  const resetFilters = () => {
-    setStatusFilter('all');
-    setSearchTerm('');
-  };
-
   if (isLoading || !isAdmin) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
 
   return (
@@ -322,9 +285,7 @@ export default function ComplaintsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <CardTitle>Complaint Inbox</CardTitle>
-                <CardDescription>
-                    Filter and manage incoming student complaints.
-                </CardDescription>
+                <CardDescription>Filter and manage incoming student complaints.</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full md:w-64">
@@ -348,11 +309,6 @@ export default function ComplaintsPage() {
                         <SelectItem value="Resolved">Resolved</SelectItem>
                     </SelectContent>
                 </Select>
-                {(statusFilter !== 'all' || searchTerm !== '') && (
-                    <Button variant="ghost" size="icon" onClick={resetFilters} title="Clear Filters">
-                        <FilterX className="h-4 w-4" />
-                    </Button>
-                )}
             </div>
           </div>
         </CardHeader>
@@ -370,7 +326,7 @@ export default function ComplaintsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredComplaints && filteredComplaints.length > 0 ? (
+              {filteredComplaints.length > 0 ? (
                 filteredComplaints.map((complaint) => (
                   <TableRow key={complaint.id}>
                     <TableCell>
@@ -378,7 +334,7 @@ export default function ComplaintsPage() {
                       <div className="text-sm text-muted-foreground">{complaint.studentId}</div>
                     </TableCell>
                     <TableCell>
-                        <Badge variant={(studentComplaintCounts[complaint.studentId] ?? 0) > 2 ? 'destructive' : (studentComplaintCounts[complaint.studentId] ?? 0) > 0 ? 'secondary' : 'outline'}>
+                        <Badge variant={(studentComplaintCounts[complaint.studentId] ?? 0) > 2 ? 'destructive' : 'outline'}>
                             {studentComplaintCounts[complaint.studentId] ?? 0}
                         </Badge>
                     </TableCell>
@@ -386,23 +342,13 @@ export default function ComplaintsPage() {
                     <TableCell>{complaint.title}</TableCell>
                     <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
                     <TableCell>
-                        <Badge
-                            variant={
-                            complaint.status === 'Rejected'
-                                ? 'destructive'
-                                : complaint.status === 'Resolved'
-                                ? 'secondary'
-                                : complaint.status === 'Approved'
-                                ? 'default'
-                                : 'outline'
-                            }
-                        >
+                        <Badge variant={complaint.status === 'Rejected' ? 'destructive' : complaint.status === 'Resolved' ? 'secondary' : complaint.status === 'Approved' ? 'default' : 'outline'}>
                             {complaint.status}
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                        <div className="flex items-center justify-end gap-2">
-                        {complaint.status === 'Pending' && isAdmin && (
+                        {complaint.status === 'Pending' && (
                             <>
                                 <Button size="sm" onClick={() => handleStatusUpdate(complaint, 'Approved')} disabled={updatingId === complaint.id}>
                                    {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
@@ -412,16 +358,8 @@ export default function ComplaintsPage() {
                                 </Button>
                             </>
                           )}
-                          {complaint.status === 'Approved' && isAdmin && (
-                            <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(complaint, 'Resolved')} disabled={updatingId === complaint.id}>
-                                {updatingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resolve'}
-                            </Button>
-                          )}
-                          
                           <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(complaint)}>View</Button>
-                          
-                          {isAdmin && (
-                            <AlertDialog>
+                          <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={deletingId === complaint.id}>
                                   {deletingId === complaint.id ? <Loader2 className="h-4 w-4 animate-spin"/> :<Trash2 className="h-4 w-4" />}
@@ -430,30 +368,22 @@ export default function ComplaintsPage() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the complaint regarding "{complaint.title}".
-                                  </AlertDialogDescription>
+                                  <AlertDialogDescription>This action cannot be undone. This will permanently delete this complaint.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction onClick={() => handleDelete(complaint)} disabled={deletingId === complaint.id}>
-                                    {deletingId === complaint.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Delete Complaint
+                                    Delete
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          )}
                        </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                    <TableCell colSpan={7} className="text-center h-24">
-                        {searchTerm || statusFilter !== 'all' ? 'No complaints match your filters.' : 'There are no complaints at this time.'}
-                    </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No complaints found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -465,9 +395,7 @@ export default function ComplaintsPage() {
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>{viewingComplaint.title}</DialogTitle>
-                    <DialogDescription>
-                        Details for the complaint filed on {viewingComplaint.dateSubmitted?.seconds ? format(new Date(viewingComplaint.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'}.
-                    </DialogDescription>
+                    <DialogDescription>Details for the complaint filed against {viewingComplaint.studentName}.</DialogDescription>
                 </DialogHeader>
                 <Separator />
                 <ScrollArea className="max-h-[60vh] pr-4">
@@ -476,56 +404,27 @@ export default function ComplaintsPage() {
                           <span className="font-semibold text-muted-foreground">Student</span>
                           <span className="col-span-2">{viewingComplaint.studentName} ({viewingComplaint.studentId})</span>
                       </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Filed By</span>
-                          <span className="col-span-2">{viewingComplaint.filedByName}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Status</span>
-                          <span className="col-span-2"><Badge variant={viewingComplaint.status === 'Rejected' ? 'destructive' : viewingComplaint.status === 'Resolved' ? 'secondary' : viewingComplaint.status === 'Approved' ? 'default' : 'outline'}>{viewingComplaint.status}</Badge></span>
-                      </div>
-                      
-                      <Separator />
-                      
                       <div>
                           <p className="font-semibold mb-2 text-muted-foreground">Description</p>
                           <p className="whitespace-pre-wrap">{viewingComplaint.description}</p>
                       </div>
-
                       {viewingComplaint.evidenceUrl && (
-                        <>
-                          <Separator />
-                          <div>
-                            <p className="font-semibold mb-3 text-muted-foreground flex items-center gap-2">
-                              {isVideo(viewingComplaint.evidenceUrl) ? <Film className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
-                              Attached Evidence
-                            </p>
+                        <div className="space-y-2">
+                            <p className="font-semibold text-muted-foreground">Evidence</p>
                             <div className="relative border rounded-lg overflow-hidden bg-black flex items-center justify-center">
                               {isVideo(viewingComplaint.evidenceUrl) ? (
-                                <video 
-                                  src={viewingComplaint.evidenceUrl} 
-                                  controls 
-                                  className="max-h-[300px] w-full"
-                                />
+                                <video src={viewingComplaint.evidenceUrl} controls className="max-h-[300px] w-full" />
                               ) : (
                                 <div className="relative aspect-video w-full h-[250px]">
-                                  <Image
-                                    src={viewingComplaint.evidenceUrl}
-                                    alt="Complaint Evidence"
-                                    fill
-                                    className="object-contain"
-                                  />
+                                  <Image src={viewingComplaint.evidenceUrl} alt="Evidence" fill className="object-contain" />
                                 </div>
                               )}
                             </div>
-                          </div>
-                        </>
+                        </div>
                       )}
                   </div>
                 </ScrollArea>
-                <DialogFooter>
-                    <Button onClick={() => setViewingComplaint(null)}>Close</Button>
-                </DialogFooter>
+                <DialogFooter><Button onClick={() => setViewingComplaint(null)}>Close</Button></DialogFooter>
             </DialogContent>
         </Dialog>
       )}
