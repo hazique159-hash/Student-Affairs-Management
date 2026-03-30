@@ -59,7 +59,8 @@ service cloud.firestore {
       allow get, list, delete: if isAdmin();
       allow create: if isSignedIn();
       // Allow students to update payment info on their own violations
-      allow update: if isAdmin() || isSignedIn();
+      // We allow updates if the user is signed in and only modifying payment fields
+      allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentReceiptUrl']));
     }
 
     match /fines/{fineId} {

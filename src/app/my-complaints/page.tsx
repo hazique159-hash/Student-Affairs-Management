@@ -122,14 +122,9 @@ export default function MyComplaintsPage() {
             paymentReceiptUrl: receiptPreview
         });
 
-        // 3. Update filer's record if it exists
-        if (payingComplaint.filedById && payingComplaint.filedById !== 'system') {
-            const filerComplaintRef = doc(firestore, `users/${payingComplaint.filedById}/complaints`, payingComplaint.id);
-            batch.update(filerComplaintRef, { 
-                paymentStatus: 'Submitted',
-                paymentReceiptUrl: receiptPreview
-            });
-        }
+        // 3. Update filer's record if it exists - removed to avoid permission issues
+        // The student should not have permission to write to other users' directories
+        // The admin will see the update in the master 'complaints' collection.
 
         await batch.commit();
         

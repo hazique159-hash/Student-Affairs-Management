@@ -1,6 +1,6 @@
 
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye, CheckCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -283,7 +283,10 @@ export default function ComplaintsPage() {
                             </>
                         )}
                         {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>Resolve</Button>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Verify & Resolve
+                            </Button>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => setViewingComplaint(c)}>Details</Button>
                         <AlertDialog>
