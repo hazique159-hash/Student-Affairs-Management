@@ -176,8 +176,8 @@ export default function ComplaintsPage() {
         toast({
             title: `Complaint ${newStatus}`,
             description: newStatus === 'Approved' 
-                ? `Approved for ${complaint.studentName}. ${studentPortalFound ? 'Rs. 1000 fine issued.' : '(Fine skip: No portal account found)'}`
-                : `The status has been updated.`
+                ? `Approved for ${complaint.studentName}. ${studentPortalFound ? 'Rs. 1000 fine issued.' : '(Note: Student has no portal account to receive fine)'}`
+                : `Status updated successfully.`
         });
 
     } catch (error: any) {
