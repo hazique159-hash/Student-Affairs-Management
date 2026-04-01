@@ -59,7 +59,6 @@ service cloud.firestore {
       allow get, list, delete: if isAdmin();
       allow create: if isSignedIn();
       // Allow students to update payment info on their own violations
-      // We allow updates if the user is signed in and only modifying payment fields
       allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentReceiptUrl']));
     }
 
@@ -79,13 +78,13 @@ service cloud.firestore {
     match /users/{userId}/complaints/{complaintId} {
         allow read: if isOwner(userId) || isTeacher() || isAdmin();
         allow create: if isOwner(userId) || isTeacher() || isAdmin();
-        // Allow student to update their own record (e.g., submitting payment)
         allow update: if isAdmin() || isOwner(userId);
         allow delete: if isAdmin();
     }
     
-    match /{path=**}/volunteerApplications/{applicationId} {
-      allow read, write: if isAdmin();
+    match /volunteerApplications/{applicationId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
 
     match /users/{userId}/volunteerApplications/{applicationId} {
