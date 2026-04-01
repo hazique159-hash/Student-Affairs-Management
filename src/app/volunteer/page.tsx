@@ -24,6 +24,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
@@ -37,11 +44,15 @@ import {
 import type { Student } from '@/lib/types';
 import { useEffect } from 'react';
 
+const SEMESTERS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+
 const volunteerSchema = z.object({
   eventName: z.string().min(3, { message: 'Event name must be at least 3 characters.' }),
   reason: z
     .string()
     .min(20, { message: 'Reason must be at least 20 characters.' }),
+  whatsappNumber: z.string().min(10, { message: 'WhatsApp number must be at least 10 digits.' }),
+  semester: z.string().min(1, { message: 'Please select your semester.' }),
 });
 
 export default function VolunteerPage() {
@@ -67,6 +78,8 @@ export default function VolunteerPage() {
     defaultValues: {
       eventName: '',
       reason: '',
+      whatsappNumber: '',
+      semester: '',
     },
   });
 
@@ -103,6 +116,8 @@ export default function VolunteerPage() {
         id: applicationId,
         eventName: values.eventName,
         reason: values.reason,
+        whatsappNumber: values.whatsappNumber,
+        semester: values.semester,
         studentId: studentRegId,
         studentName: studentName,
         department: studentDept,
@@ -174,6 +189,48 @@ export default function VolunteerPage() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="whatsappNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp No.</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="03XXXXXXXXX"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="semester"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Semester</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Semester" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SEMESTERS.map((sem) => (
+                            <SelectItem key={sem} value={sem}>
+                              {sem} Semester
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="reason"

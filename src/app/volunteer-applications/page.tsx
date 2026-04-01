@@ -1,6 +1,6 @@
 
 'use client';
-import { ClipboardList, Loader2, Phone, Briefcase } from 'lucide-react';
+import { ClipboardList, Loader2, Phone, Briefcase, MessageSquare } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -143,7 +143,10 @@ export default function VolunteerApplicationsPage() {
                       <TableCell>
                         <div className="space-y-1">
                             <div className="font-bold text-sm">{app.studentName}</div>
-                            <div className="text-[10px] text-muted-foreground uppercase font-mono">{app.studentId}</div>
+                            <div className="flex gap-2 items-center">
+                              <div className="text-[10px] text-muted-foreground uppercase font-mono">{app.studentId}</div>
+                              {app.semester && <Badge variant="secondary" className="text-[8px] h-3 px-1">{app.semester} Sem</Badge>}
+                            </div>
                             <div className="flex flex-col gap-1 mt-1">
                                 {app.department && (
                                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -151,7 +154,13 @@ export default function VolunteerApplicationsPage() {
                                         {app.department}
                                     </div>
                                 )}
-                                {app.phoneNumber && (
+                                {app.whatsappNumber && (
+                                    <div className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                                        <MessageSquare className="h-3 w-3" />
+                                        {app.whatsappNumber}
+                                    </div>
+                                )}
+                                {app.phoneNumber && !app.whatsappNumber && (
                                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                         <Phone className="h-3 w-3" />
                                         {app.phoneNumber}

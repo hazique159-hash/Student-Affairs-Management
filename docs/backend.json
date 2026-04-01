@@ -408,6 +408,14 @@
           "type": "string",
           "description": "The contact number of the student."
         },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "The WhatsApp number of the student."
+        },
+        "semester": {
+          "type": "string",
+          "description": "The current semester of the student."
+        },
         "eventName": {
           "type": "string",
           "description": "The name of the event the student is volunteering for."
@@ -438,7 +446,9 @@
         "eventName",
         "reason",
         "status",
-        "dateApplied"
+        "dateApplied",
+        "whatsappNumber",
+        "semester"
       ]
     }
   },
