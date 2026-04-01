@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ChartConfig } from "@/components/ui/chart";
 import type { Student, Teacher, Complaint } from "@/lib/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, PieChart as PieIcon, BarChart3 } from "lucide-react";
 
 const DEPARTMENTS = [
   'Computer Science',
@@ -26,22 +26,27 @@ const DEPARTMENTS = [
 ] as const;
 
 const chartConfig = {
-  count: {
-    label: "Count",
-  },
   students: {
     label: "Students",
-    color: "hsl(var(--chart-1))",
+    color: "hsl(var(--primary))",
   },
   teachers: {
     label: "Teachers",
-    color: "hsl(var(--chart-2))",
+    color: "hsl(var(--accent))",
   },
   complaints: {
     label: "Complaints",
     color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig;
+
+const STATUS_COLORS = {
+  Pending: "hsl(var(--destructive))",
+  Approved: "hsl(var(--chart-1))",
+  Resolved: "hsl(var(--chart-2))",
+  Rejected: "hsl(var(--muted-foreground))",
+  Open: "hsl(var(--chart-5))",
+};
 
 interface AnalyticsChartProps {
   students: Student[];
@@ -53,7 +58,7 @@ interface AnalyticsChartProps {
 export function AnalyticsChart({ students, teachers, complaints, isLoading }: AnalyticsChartProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("Computer Science");
 
-  const chartData = useMemo(() => {
+  const deptData = useMemo(() => {
     if (isLoading) return [];
 
     const deptStudents = students.filter(s => s.department === selectedDepartment);
@@ -63,7 +68,7 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
 
     return [
       {
-        category: selectedDepartment,
+        name: selectedDepartment,
         students: deptStudents.length,
         teachers: deptTeachers.length,
         complaints: deptComplaints.length,
@@ -71,71 +76,141 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
     ];
   }, [selectedDepartment, students, teachers, complaints, isLoading]);
 
+  const statusData = useMemo(() => {
+    if (isLoading) return [];
+    
+    const statusCounts: Record<string, number> = {};
+    complaints.forEach(c => {
+      statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
+    });
+
+    return Object.entries(statusCounts).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  }, [complaints, isLoading]);
+
   return (
-    <Card className="w-full h-full flex flex-col">
-      <CardHeader className="py-3">
-        <div className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-lg">Department Insights</CardTitle>
-            <CardDescription className="text-xs">Metrics for the selected department.</CardDescription>
+    <div className="grid gap-6">
+      {/* Department Comparison Bar Chart */}
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-6">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-lg">Department Metrics</CardTitle>
+              <CardDescription>Engagement and violation trends by department.</CardDescription>
+            </div>
           </div>
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[200px] h-8 text-xs">
+            <SelectTrigger className="w-[180px] h-9">
               <SelectValue placeholder="Select Department" />
             </SelectTrigger>
             <SelectContent>
               {DEPARTMENTS.map((dept) => (
-                <SelectItem key={dept} value={dept} className="text-xs">
+                <SelectItem key={dept} value={dept}>
                   {dept}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-0 pt-0 pb-4 px-2">
-        {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex h-[300px] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={deptData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
+                  <XAxis dataKey="name" hide />
+                  <YAxis fontSize={12} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar 
+                    name="Students"
+                    dataKey="students" 
+                    fill="var(--color-students)" 
+                    radius={[6, 6, 0, 0]} 
+                    barSize={60}
+                  />
+                  <Bar 
+                    name="Teachers"
+                    dataKey="teachers" 
+                    fill="var(--color-teachers)" 
+                    radius={[6, 6, 0, 0]} 
+                    barSize={60}
+                  />
+                  <Bar 
+                    name="Complaints"
+                    dataKey="complaints" 
+                    fill="var(--color-complaints)" 
+                    radius={[6, 6, 0, 0]} 
+                    barSize={60}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Complaint Status Distribution */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <PieIcon className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-lg">Resolution Status</CardTitle>
+              <CardDescription>Global breakdown of complaint lifecycle.</CardDescription>
+            </div>
           </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis 
-                  dataKey="category" 
-                  hide 
-                />
-                <YAxis fontSize={12} width={30} />
-                <Tooltip content={<ChartTooltipContent />} />
-                <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
-                <Bar 
-                  name="Students"
-                  dataKey="students" 
-                  fill="var(--color-students)" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={40}
-                />
-                <Bar 
-                  name="Teachers"
-                  dataKey="teachers" 
-                  fill="var(--color-teachers)" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={40}
-                />
-                <Bar 
-                  name="Complaints"
-                  dataKey="complaints" 
-                  fill="var(--color-complaints)" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={40}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex h-[250px] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="h-[250px] w-full flex flex-col md:flex-row items-center justify-around">
+               <div className="h-full w-full md:w-1/2">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                    <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                    >
+                        {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || "hsl(var(--primary))"} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                    </PieChart>
+                </ResponsiveContainer>
+               </div>
+               <div className="grid grid-cols-2 gap-4 text-sm w-full md:w-1/2 p-4">
+                  {statusData.map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                        <div 
+                          className="h-3 w-3 rounded-full" 
+                          style={{ backgroundColor: STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] }} 
+                        />
+                        <span className="font-medium">{entry.name}:</span>
+                        <span className="text-muted-foreground">{entry.value}</span>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
