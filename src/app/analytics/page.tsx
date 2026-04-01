@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
     [firestore]
   );
   const recentComplaintsRef = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'complaints'), orderBy('dateSubmitted', 'desc'), limit(5)) : null),
+    () => (firestore ? query(collection(firestore, 'complaints'), orderBy('dateSubmitted', 'desc'), limit(10)) : null),
     [firestore]
   );
 
@@ -46,88 +46,84 @@ export default function AnalyticsPage() {
   const isLoading = isLoadingStudents || isLoadingTeachers || isLoadingComplaints;
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-4 pb-4">
       <PageHeader
-        title="Institutional Analytics"
+        title="Dashboard Overview"
         icon={BarChart2}
-        description="Comprehensive overview of student affairs, department metrics, and resolution status."
+        description="Real-time institutional metrics and activity."
       />
 
-      {/* Top Stats Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Top Stats Row - Compact */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm border-l-4 border-l-primary">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Enrolled Students
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Students
             </CardTitle>
-            <Users className="h-5 w-5 text-primary" />
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingStudents ? (
-               <Loader2 className="h-6 w-6 animate-spin" />
+               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <div className="text-3xl font-bold">{students?.length ?? 0}</div>
+              <div className="text-xl font-bold">{students?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Active registrations</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-l-4 border-l-accent">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Faculty Members
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              Faculty
             </CardTitle>
-            <UserCheck className="h-5 w-5 text-accent" />
+            <UserCheck className="h-4 w-4 text-accent" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingTeachers ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <div className="text-3xl font-bold">{teachers?.length ?? 0}</div>
+              <div className="text-xl font-bold">{teachers?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Verified educators</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Total Reports
             </CardTitle>
-            <MessageSquareWarning className="h-5 w-5 text-blue-500" />
+            <MessageSquareWarning className="h-4 w-4 text-blue-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingComplaints ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <div className="text-3xl font-bold">{complaints?.length ?? 0}</div>
+              <div className="text-xl font-bold">{complaints?.length ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Historical violations</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-l-4 border-l-destructive bg-destructive/5">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-destructive uppercase tracking-wider">
-              Critical Actions
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4">
+            <CardTitle className="text-[10px] font-bold text-destructive uppercase tracking-wider">
+              Pending
             </CardTitle>
-            <Clock className="h-5 w-5 text-destructive" />
+            <Clock className="h-4 w-4 text-destructive" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             {isLoadingComplaints ? (
-              <Loader2 className="h-6 w-6 animate-spin text-destructive" />
+              <Loader2 className="h-4 w-4 animate-spin text-destructive" />
             ) : (
-              <div className="text-3xl font-bold text-destructive">{pendingComplaintsCount}</div>
+              <div className="text-xl font-bold text-destructive">{pendingComplaintsCount}</div>
             )}
-            <p className="text-xs text-destructive/70 mt-1">Awaiting review</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Main Content Grid - Optimized for single page height */}
+      <div className="grid gap-4 lg:grid-cols-4">
         {/* Charts Section */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-4">
           <AnalyticsChart 
             students={students || []} 
             teachers={teachers || []} 
@@ -137,43 +133,40 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Sidebar Activity Section */}
-        <Card className="flex flex-col h-full shadow-sm">
-          <CardHeader className="border-b bg-muted/30">
+        <Card className="flex flex-col h-full shadow-sm max-h-[600px]">
+          <CardHeader className="border-b bg-muted/30 p-4">
             <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              <div>
-                <CardTitle className="text-lg">Recent Activity</CardTitle>
-                <CardDescription>Latest violation reports</CardDescription>
-              </div>
+              <Activity className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm">Recent Activity</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex-1">
-            <ScrollArea className="h-[450px]">
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="divide-y">
                 {isLoadingRecent ? (
-                  <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8 text-muted-foreground" /></div>
+                  <div className="flex justify-center p-8"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
                 ) : recentComplaints && recentComplaints.length > 0 ? (
                   recentComplaints.map((c) => (
-                    <div key={c.id} className="p-4 hover:bg-muted/40 transition-colors">
+                    <div key={c.id} className="p-3 hover:bg-muted/40 transition-colors">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm truncate max-w-[150px]">{c.studentName}</span>
-                        <Badge variant={c.status === 'Pending' ? 'destructive' : 'secondary'} className="text-[10px]">
+                        <span className="font-semibold text-xs truncate max-w-[100px]">{c.studentName}</span>
+                        <Badge variant={c.status === 'Pending' ? 'destructive' : 'secondary'} className="text-[8px] h-4 px-1">
                           {c.status}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{c.title}</p>
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground italic">
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mb-1">{c.title}</p>
+                      <div className="flex items-center justify-between text-[8px] text-muted-foreground italic">
                         <span>{c.studentId}</span>
                         <span>
                           {c.dateSubmitted?.seconds 
-                            ? format(new Date(c.dateSubmitted.seconds * 1000), 'MMM d, h:mm a') 
-                            : 'Recently'}
+                            ? format(new Date(c.dateSubmitted.seconds * 1000), 'MMM d') 
+                            : 'Just now'}
                         </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-8 text-center text-sm text-muted-foreground">No recent activity recorded.</div>
+                  <div className="p-8 text-center text-xs text-muted-foreground">No recent records.</div>
                 )}
               </div>
             </ScrollArea>

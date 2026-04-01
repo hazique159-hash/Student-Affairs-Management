@@ -91,65 +91,44 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
   }, [complaints, isLoading]);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4 md:grid-cols-2">
       {/* Department Comparison Bar Chart */}
       <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 pt-4 px-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <div>
-              <CardTitle className="text-lg">Department Metrics</CardTitle>
-              <CardDescription>Engagement and violation trends by department.</CardDescription>
-            </div>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm">Dept. Comparison</CardTitle>
           </div>
           <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="Select Department" />
+            <SelectTrigger className="w-[140px] h-7 text-xs">
+              <SelectValue placeholder="Dept." />
             </SelectTrigger>
             <SelectContent>
               {DEPARTMENTS.map((dept) => (
-                <SelectItem key={dept} value={dept}>
+                <SelectItem key={dept} value={dept} className="text-xs">
                   {dept}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2">
           {isLoading ? (
-            <div className="flex h-[300px] items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex h-[200px] items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={deptData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
+                <BarChart data={deptData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                   <XAxis dataKey="name" hide />
-                  <YAxis fontSize={12} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltipContent />} />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar 
-                    name="Students"
-                    dataKey="students" 
-                    fill="var(--color-students)" 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={60}
-                  />
-                  <Bar 
-                    name="Teachers"
-                    dataKey="teachers" 
-                    fill="var(--color-teachers)" 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={60}
-                  />
-                  <Bar 
-                    name="Complaints"
-                    dataKey="complaints" 
-                    fill="var(--color-complaints)" 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={60}
-                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                  <Bar name="Students" dataKey="students" fill="var(--color-students)" radius={[4, 4, 0, 0]} barSize={40} />
+                  <Bar name="Teachers" dataKey="teachers" fill="var(--color-teachers)" radius={[4, 4, 0, 0]} barSize={40} />
+                  <Bar name="Complaints" dataKey="complaints" fill="var(--color-complaints)" radius={[4, 4, 0, 0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -159,31 +138,28 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
 
       {/* Complaint Status Distribution */}
       <Card className="shadow-sm">
-        <CardHeader>
+        <CardHeader className="p-4 pb-2">
           <div className="flex items-center gap-2">
-            <PieIcon className="h-5 w-5 text-primary" />
-            <div>
-              <CardTitle className="text-lg">Resolution Status</CardTitle>
-              <CardDescription>Global breakdown of complaint lifecycle.</CardDescription>
-            </div>
+            <PieIcon className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm">Resolution Mix</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2">
           {isLoading ? (
-            <div className="flex h-[250px] items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex h-[200px] items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="h-[250px] w-full flex flex-col md:flex-row items-center justify-around">
-               <div className="h-full w-full md:w-1/2">
+            <div className="h-[200px] w-full flex flex-col items-center justify-center">
+               <div className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                     <Pie
                         data={statusData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        innerRadius={45}
+                        outerRadius={65}
                         paddingAngle={5}
                         dataKey="value"
                     >
@@ -195,15 +171,14 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading }: An
                     </PieChart>
                 </ResponsiveContainer>
                </div>
-               <div className="grid grid-cols-2 gap-4 text-sm w-full md:w-1/2 p-4">
+               <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[9px] text-muted-foreground mt-1">
                   {statusData.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                    <div key={index} className="flex items-center gap-1">
                         <div 
-                          className="h-3 w-3 rounded-full" 
+                          className="h-2 w-2 rounded-full" 
                           style={{ backgroundColor: STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] }} 
                         />
-                        <span className="font-medium">{entry.name}:</span>
-                        <span className="text-muted-foreground">{entry.value}</span>
+                        <span>{entry.name}: {entry.value}</span>
                     </div>
                   ))}
                </div>
