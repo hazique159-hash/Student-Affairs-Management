@@ -23,6 +23,10 @@
           "type": "string",
           "description": "Student's last name."
         },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Student's contact phone number."
+        },
         "department": {
           "type": "string",
           "description": "Student's department (e.g., CS, SE, BBA)."
@@ -112,6 +116,10 @@
           "type": "string",
           "description": "Teacher's email address.",
           "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Teacher's contact phone number."
         },
         "department": {
           "type": "string",

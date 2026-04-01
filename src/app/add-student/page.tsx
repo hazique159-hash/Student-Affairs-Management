@@ -1,3 +1,4 @@
+
 'use client';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ const studentSchema = z.object({
     .regex(/^[A-Z0-9]+$/, { 
       message: 'Registration number must contain only capital letters and numbers (no special characters or spaces).' 
     }),
+  phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 digits.' }),
   department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
@@ -83,6 +85,7 @@ export default function AddStudentPage() {
       firstName: '',
       lastName: '',
       registrationNumber: '',
+      phoneNumber: '',
       department: undefined,
       password: '',
     },
@@ -121,6 +124,7 @@ export default function AddStudentPage() {
           registrationNumber: values.registrationNumber,
           firstName: values.firstName,
           lastName: values.lastName,
+          phoneNumber: values.phoneNumber,
           department: values.department,
           parentEmail: '',
           parentPhoneNumber: '',
@@ -198,22 +202,37 @@ export default function AddStudentPage() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="registrationNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Registration Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="BCS223089" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Only capital letters and numbers are allowed.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="registrationNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registration Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="BCS223089" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Only capital letters and numbers.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="03123456789" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
                <FormField
                   control={form.control}
                   name="department"

@@ -20,6 +20,7 @@ export type Student = {
   firstName: string;
   lastName: string;
   department: Department;
+  phoneNumber: string;
   name: string;
   email: string;
   phone: string;
@@ -53,6 +54,7 @@ export type Teacher = {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber: string;
   department: Department;
 };
 

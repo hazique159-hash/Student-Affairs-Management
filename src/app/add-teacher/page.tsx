@@ -1,3 +1,4 @@
+
 'use client';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
+  phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 digits.' }),
   department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
@@ -77,6 +79,7 @@ export default function AddTeacherPage() {
       firstName: '',
       lastName: '',
       email: '',
+      phoneNumber: '',
       department: undefined,
       password: '',
     },
@@ -111,6 +114,7 @@ export default function AddTeacherPage() {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
+          phoneNumber: values.phoneNumber,
           department: values.department,
         });
 
@@ -177,23 +181,38 @@ export default function AddTeacherPage() {
                   )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="teacher@example.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="teacher@example.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="03123456789" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                   control={form.control}
                   name="department"
