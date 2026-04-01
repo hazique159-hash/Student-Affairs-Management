@@ -1,5 +1,6 @@
+
 'use client';
-import { ClipboardList, Loader2 } from 'lucide-react';
+import { ClipboardList, Loader2, Phone, Briefcase } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -72,8 +73,6 @@ export default function VolunteerApplicationsPage() {
             const studentUserDoc = studentUserSnapshot.docs[0];
             const studentAppRef = doc(firestore, `users/${studentUserDoc.id}/volunteerApplications`, application.id);
             batch.update(studentAppRef, { status: newStatus });
-        } else {
-            console.warn(`Could not find user account for student ID: ${application.studentId}.`);
         }
         
         await batch.commit();
@@ -99,7 +98,7 @@ export default function VolunteerApplicationsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title="Volunteer Applications"
         icon={ClipboardList}
@@ -113,80 +112,103 @@ export default function VolunteerApplicationsPage() {
             Approve or reject applications from students for various events.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Date Applied</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-40 ml-auto" /></TableCell>
-                  </TableRow>
-                ))}
-              {!isLoading && applications && applications.length > 0 ? (
-                applications.map((app) => (
-                  <TableRow key={app.id}>
-                    <TableCell>
-                      <div className="font-medium">{app.studentName}</div>
-                      <div className="text-sm text-muted-foreground">{app.studentId}</div>
-                    </TableCell>
-                    <TableCell>{app.eventName}</TableCell>
-                    <TableCell>{app.dateApplied?.seconds ? format(new Date(app.dateApplied.seconds * 1000), 'PPP') : 'N/A'}</TableCell>
-                    <TableCell className="max-w-xs truncate">{app.reason}</TableCell>
-                    <TableCell>
-                        <Badge
-                            variant={
-                            app.status === 'Rejected'
-                                ? 'destructive'
-                                : app.status === 'Approved'
-                                ? 'default'
-                                : 'outline'
-                            }
-                        >
-                            {app.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <div className="flex items-center justify-end gap-2">
-                        {app.status === 'Pending' && isAdmin && (
-                            <>
-                                <Button size="sm" onClick={() => handleStatusUpdate(app, 'Approved')} disabled={updatingId === app.id}>
-                                   {updatingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleStatusUpdate(app, 'Rejected')} disabled={updatingId === app.id}>
-                                   Reject
-                                </Button>
-                            </>
-                          )}
-                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                !isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
-                      There are no volunteer applications at this time.
-                    </TableCell>
-                  </TableRow>
-                )
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="px-0 sm:px-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[150px]">Student Info</TableHead>
+                  <TableHead className="min-w-[120px]">Event</TableHead>
+                  <TableHead className="min-w-[100px]">Applied On</TableHead>
+                  <TableHead className="min-w-[200px]">Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading &&
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-40 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                {!isLoading && applications && applications.length > 0 ? (
+                  applications.map((app) => (
+                    <TableRow key={app.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                            <div className="font-bold text-sm">{app.studentName}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-mono">{app.studentId}</div>
+                            <div className="flex flex-col gap-1 mt-1">
+                                {app.department && (
+                                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                        <Briefcase className="h-3 w-3" />
+                                        {app.department}
+                                    </div>
+                                )}
+                                {app.phoneNumber && (
+                                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                        <Phone className="h-3 w-3" />
+                                        {app.phoneNumber}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{app.eventName}</TableCell>
+                      <TableCell className="text-xs">
+                          {app.dateApplied?.seconds ? format(new Date(app.dateApplied.seconds * 1000), 'MMM d, yyyy') : 'N/A'}
+                      </TableCell>
+                      <TableCell className="max-w-[250px] text-xs leading-relaxed italic text-muted-foreground">
+                          {app.reason}
+                      </TableCell>
+                      <TableCell>
+                          <Badge
+                              className="text-[10px]"
+                              variant={
+                                app.status === 'Rejected'
+                                    ? 'destructive'
+                                    : app.status === 'Approved'
+                                    ? 'default'
+                                    : 'outline'
+                              }
+                          >
+                              {app.status}
+                          </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                         <div className="flex items-center justify-end gap-1">
+                          {app.status === 'Pending' && isAdmin && (
+                              <>
+                                  <Button size="sm" className="h-7 px-3 text-[10px]" onClick={() => handleStatusUpdate(app, 'Approved')} disabled={updatingId === app.id}>
+                                     {updatingId === app.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Approve'}
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="h-7 px-3 text-[10px]" onClick={() => handleStatusUpdate(app, 'Rejected')} disabled={updatingId === app.id}>
+                                     Reject
+                                  </Button>
+                              </>
+                            )}
+                         </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-32 text-muted-foreground italic">
+                        No applications found.
+                      </TableCell>
+                    </TableRow>
+                  )
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

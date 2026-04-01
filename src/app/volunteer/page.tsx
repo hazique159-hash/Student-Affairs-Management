@@ -1,3 +1,4 @@
+
 'use client';
 import { HandHeart, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -87,12 +88,15 @@ export default function VolunteerPage() {
       const studentDocRef = doc(firestore, 'students', studentRegId);
       const studentDoc = await getDoc(studentDocRef);
       
-      let studentName: string;
+      let studentName = 'Student';
+      let studentDept = '';
+      let studentPhone = '';
+
       if (studentDoc.exists()) {
         const studentData = studentDoc.data() as Student;
         studentName = `${studentData.firstName} ${studentData.lastName}`;
-      } else {
-        studentName = 'Student'; // Fallback
+        studentDept = studentData.department || '';
+        studentPhone = studentData.phoneNumber || '';
       }
 
       const applicationData = {
@@ -101,6 +105,8 @@ export default function VolunteerPage() {
         reason: values.reason,
         studentId: studentRegId,
         studentName: studentName,
+        department: studentDept,
+        phoneNumber: studentPhone,
         status: 'Pending' as const,
         dateApplied: serverTimestamp(),
       };
@@ -120,7 +126,7 @@ export default function VolunteerPage() {
         description: 'Your volunteer application has been submitted for review.',
       });
 
-      router.push('/announcements'); // Or a 'my-applications' page if it existed
+      router.push('/announcements');
     } catch (error: any) {
       toast({
         variant: 'destructive',

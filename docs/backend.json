@@ -400,6 +400,14 @@
           "type": "string",
           "description": "The name of the student applying."
         },
+        "department": {
+          "type": "string",
+          "description": "The department of the student."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The contact number of the student."
+        },
         "eventName": {
           "type": "string",
           "description": "The name of the event the student is volunteering for."
@@ -574,6 +582,22 @@
             {
               "name": "complaintId",
               "description": "The unique ID of the complaint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/volunteerApplications/{applicationId}",
+        "definition": {
+          "entityName": "VolunteerApplication",
+          "schema": {
+            "$ref": "#/backend/entities/VolunteerApplication"
+          },
+          "description": "Top-level collection for all volunteer applications.",
+          "params": [
+            {
+              "name": "applicationId",
+              "description": "The unique ID of the application."
             }
           ]
         }

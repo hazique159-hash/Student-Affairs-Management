@@ -95,6 +95,8 @@ export type VolunteerApplication = {
   id: string;
   studentId: string;
   studentName: string;
+  department?: string;
+  phoneNumber?: string;
   eventName: string;
   reason: string;
   status: 'Pending' | 'Approved' | 'Rejected';
