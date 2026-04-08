@@ -1,5 +1,5 @@
 'use client';
-import { ClipboardList, Loader2, Phone, Briefcase, MessageSquare } from 'lucide-react';
+import { ClipboardList, Loader2, Phone, Briefcase, MessageSquare, Download } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -23,6 +23,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function VolunteerApplicationsPage() {
   const { user, isUserLoading } = useUser();
@@ -48,6 +51,33 @@ export default function VolunteerApplicationsPage() {
     }
   }, [isUserLoading, user, isAdmin, router]);
 
+  const handleDownloadPDF = () => {
+    if (!applications || applications.length === 0) return;
+
+    const pdf = new jsPDF();
+    pdf.text('AffairsConnect - Volunteer Applications Report', 14, 15);
+    
+    const tableData = applications.map(app => [
+      app.studentName,
+      app.studentId,
+      app.department || 'N/A',
+      app.semester ? `${app.semester} Sem` : 'N/A',
+      app.eventName,
+      app.whatsappNumber || app.phoneNumber || 'N/A',
+      app.dateApplied?.seconds ? format(new Date(app.dateApplied.seconds * 1000), 'MMM d, yyyy') : 'N/A'
+    ]);
+
+    autoTable(pdf, {
+      startY: 25,
+      head: [['Student', 'ID', 'Dept', 'Sem', 'Event', 'Contact', 'Applied On']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillStyle: 'DF', fillColor: [79, 70, 229] }, // Primary color
+    });
+
+    pdf.save(`volunteer-applications-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   if (isLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
@@ -58,7 +88,18 @@ export default function VolunteerApplicationsPage() {
         title="Volunteer Applications"
         icon={ClipboardList}
         description="Review student volunteer applications for upcoming events."
-      />
+      >
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleDownloadPDF} 
+          disabled={!applications || applications.length === 0}
+          className="w-full sm:w-auto"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download List
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardHeader>
