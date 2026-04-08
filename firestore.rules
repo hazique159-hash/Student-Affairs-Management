@@ -66,6 +66,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    match /counseling_availability/{availabilityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
     
     match /{path=**}/counselingSessions/{counselingSessionId} {
       allow get, list: if isAdmin();
