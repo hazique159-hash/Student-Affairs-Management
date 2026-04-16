@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { HeartHandshake, UserPlus, Loader2, CalendarIcon, Trash2 } from 'lucide-react';
+import { HeartHandshake, UserPlus, Loader2, CalendarIcon, Trash2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -141,6 +140,11 @@ export default function CounselingPage() {
   const sessionsRef = useMemoFirebase(() => (firestore && isAdmin ? collectionGroup(firestore, 'counselingSessions') : null), [firestore, isAdmin]);
   const { data: scheduledSessions, isLoading: isLoadingSessions } = useCollection<CounselingSession>(sessionsRef);
 
+  // Filtered Students for counseling (complaintCount > 3)
+  const eligibleStudents = useMemo(() => {
+    return students?.filter((s) => (s.complaintCount ?? 0) > 3) || [];
+  }, [students]);
+
   // Form for Teacher Availability
   const availForm = useForm<z.infer<typeof availabilitySchema>>({
     resolver: zodResolver(availabilitySchema),
@@ -208,7 +212,7 @@ export default function CounselingPage() {
         dateScheduled: values.date,
         timeSlot: values.timeSlot,
         notes: '',
-        studentAuthId: studentAuthId, // Required for deletion
+        studentAuthId: studentAuthId,
       };
       
       const sessionCollectionRef = collection(firestore, `users/${studentAuthId}/counselingSessions`);
@@ -226,10 +230,7 @@ export default function CounselingPage() {
   const handleDeleteSession = async (session: CounselingSession) => {
     if (!firestore || !isAdmin) return;
     
-    // We need the studentAuthId to construct the path.
-    // If it's missing from old records, we try to find it via studentId.
     let studentAuthId = session.studentAuthId;
-    
     setDeletingId(session.id);
     
     try {
@@ -276,15 +277,40 @@ export default function CounselingPage() {
                 <SheetContent className="w-[400px] sm:w-[540px]">
                   <Form {...scheduleForm}>
                     <form onSubmit={scheduleForm.handleSubmit(onScheduleSubmit)} className="flex h-full flex-col">
-                      <SheetHeader><SheetTitle>Schedule Counseling Session</SheetTitle><SheetDescription>Select a student and an available teacher to schedule a session.</SheetDescription></SheetHeader>
+                      <SheetHeader>
+                        <SheetTitle>Schedule Counseling Session</SheetTitle>
+                        <SheetDescription>
+                          Counseling is mandatory for students with more than 3 violations.
+                        </SheetDescription>
+                      </SheetHeader>
                       <div className="flex-1 space-y-6 overflow-y-auto py-6 px-1">
                         <FormField control={scheduleForm.control} name="studentId" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Student</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingStudents}>
-                              <FormControl><SelectTrigger><SelectValue placeholder={isLoadingStudents ? "Loading..." : "Select a student"} /></SelectTrigger></FormControl>
-                              <SelectContent>{students?.map((s) => (<SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.id})</SelectItem>))}</SelectContent>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={isLoadingStudents ? "Loading..." : "Select an eligible student"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {eligibleStudents.length > 0 ? (
+                                  eligibleStudents.map((s) => (
+                                    <SelectItem key={s.id} value={s.id}>
+                                      {s.firstName} {s.lastName} ({s.id}) - {s.complaintCount} Violations
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="p-4 text-xs text-muted-foreground flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" />
+                                    No students with &gt; 3 violations found.
+                                  </div>
+                                )}
+                              </SelectContent>
                             </Select>
+                            <FormDescription>
+                              Only students with more than 3 approved violations are eligible for counseling.
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -336,7 +362,7 @@ export default function CounselingPage() {
                           </>
                         )}
                       </div>
-                      <SheetFooter><SheetClose asChild><Button variant="outline">Cancel</Button></SheetClose><Button type="submit" disabled={scheduleForm.formState.isSubmitting}>{scheduleForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Schedule Session</Button></SheetFooter>
+                      <SheetFooter><SheetClose asChild><Button variant="outline">Cancel</Button></SheetClose><Button type="submit" disabled={scheduleForm.formState.isSubmitting || eligibleStudents.length === 0}>{scheduleForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Schedule Session</Button></SheetFooter>
                     </form>
                   </Form>
                 </SheetContent>
