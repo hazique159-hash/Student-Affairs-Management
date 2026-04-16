@@ -38,6 +38,15 @@ export type Announcement = {
   imageUrl?: string;
 };
 
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  date: any;
+  type: 'system' | 'security' | 'calendar';
+  targetRoles: string[];
+};
+
 export type CounselingSession = {
   id: string;
   studentId: string; // registration number

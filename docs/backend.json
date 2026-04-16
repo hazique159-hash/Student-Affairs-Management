@@ -334,6 +334,52 @@
         "dateSubmitted"
       ]
     },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a system notification sent to users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the notification."
+        },
+        "message": {
+          "type": "string",
+          "description": "Message content."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "system",
+            "security",
+            "calendar"
+          ]
+        },
+        "targetRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "message",
+        "date",
+        "type",
+        "targetRoles"
+      ]
+    },
     "TeacherAvailability": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "TeacherAvailability",
@@ -536,6 +582,22 @@
             {
               "name": "complaintId",
               "description": "The unique ID of the complaint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Top-level collection for system notifications.",
+          "params": [
+            {
+              "name": "notificationId",
+              "description": "The unique ID of the notification."
             }
           ]
         }

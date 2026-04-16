@@ -1,6 +1,8 @@
+
 'use client';
 
-import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -9,53 +11,65 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { useUser } from '@/firebase';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+  SheetClose,
+} from '@/components/ui/sheet';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
+import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import type { Notification } from '@/lib/types';
 
-// Mock notifications for demonstration
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    type: 'system',
-    title: 'New Campus Announcement',
-    message: 'A new holiday notification for the upcoming week has been published.',
-    date: new Date(),
-    read: false,
-    roles: ['admin', 'teacher', 'student'],
-  },
-  {
-    id: '2',
-    type: 'security',
-    title: 'Complaint Status Updated',
-    message: 'Your recent violation report regarding Library Misconduct has been Approved.',
-    date: new Date(Date.now() - 3600000), // 1 hour ago
-    read: true,
-    roles: ['student'],
-  },
-  {
-    id: '3',
-    type: 'calendar',
-    title: 'Counseling Reminder',
-    message: 'You have a scheduled counseling session tomorrow at 10:00 AM with Prof. Ahmed.',
-    date: new Date(Date.now() - 86400000), // 1 day ago
-    read: false,
-    roles: ['student'],
-  },
-  {
-    id: '4',
-    type: 'security',
-    title: 'New Pending Complaint',
-    message: 'A new violation report has been filed and requires your immediate review.',
-    date: new Date(Date.now() - 1200000), // 20 mins ago
-    read: false,
-    roles: ['admin'],
-  },
-];
+const notificationSchema = z.object({
+  title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
+  message: z.string().min(10, { message: 'Message must be at least 10 characters.' }),
+  type: z.enum(['system', 'security', 'calendar']),
+  targetRoles: z.array(z.string()).min(1, { message: 'Select at least one target role.' }),
+});
 
 export default function NotificationsPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const notificationsRef = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'notifications'), orderBy('date', 'desc')) : null),
+    [firestore]
+  );
+  const { data: notifications, isLoading: isLoadingNotifications } = useCollection<Notification>(notificationsRef);
 
   const getRole = () => {
     const email = user?.email || '';
@@ -69,9 +83,45 @@ export default function NotificationsPage() {
   };
 
   const role = getRole();
-  const filteredNotifications = MOCK_NOTIFICATIONS.filter(n => n.roles.includes(role));
+  const isAdmin = role === 'admin';
 
-  if (isUserLoading) {
+  // Client-side filtering for notifications
+  const filteredNotifications = notifications?.filter(n => n.targetRoles.includes(role)) || [];
+
+  const form = useForm<z.infer<typeof notificationSchema>>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      title: '',
+      message: '',
+      type: 'system',
+      targetRoles: [],
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof notificationSchema>) => {
+    if (!firestore) return;
+
+    try {
+      await addDoc(collection(firestore, 'notifications'), {
+        ...values,
+        date: serverTimestamp(),
+      });
+      toast({
+        title: 'Notification Sent',
+        description: 'Your notification has been dispatched to the selected users.',
+      });
+      form.reset();
+      setIsSheetOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Send',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    }
+  };
+
+  if (isUserLoading || isLoadingNotifications) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -85,7 +135,143 @@ export default function NotificationsPage() {
         title="Notifications"
         icon={Bell}
         description="Stay updated with the latest system alerts and personal notifications."
-      />
+      >
+        {isAdmin && (
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Notification
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                  <SheetHeader>
+                    <SheetTitle>Send New Notification</SheetTitle>
+                    <SheetDescription>
+                      Broadcast a system alert or reminder to students and teachers.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="py-6 space-y-6 flex-1 overflow-y-auto px-1">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Upcoming Maintenance" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Message</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Describe the details..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notification Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="system">System (Blue)</SelectItem>
+                              <SelectItem value="security">Security (Red)</SelectItem>
+                              <SelectItem value="calendar">Calendar (Purple)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="targetRoles"
+                      render={() => (
+                        <FormItem>
+                          <div className="mb-4">
+                            <FormLabel>Target Audience</FormLabel>
+                            <FormDescription>
+                              Select who should receive this notification.
+                            </FormDescription>
+                          </div>
+                          <div className="space-y-2">
+                            {['admin', 'teacher', 'student'].map((roleItem) => (
+                              <FormField
+                                key={roleItem}
+                                control={form.control}
+                                name="targetRoles"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={roleItem}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(roleItem)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, roleItem])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== roleItem
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal capitalize">
+                                        {roleItem}s
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <SheetFooter>
+                    <SheetClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </SheetClose>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send Broadcast
+                    </Button>
+                  </SheetFooter>
+                </form>
+              </Form>
+            </SheetContent>
+          </Sheet>
+        )}
+      </PageHeader>
 
       <Card className="max-w-4xl mx-auto border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm">
         <CardHeader className="px-4 sm:px-6">
@@ -106,9 +292,7 @@ export default function NotificationsPage() {
                 filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`flex items-start gap-4 p-4 transition-colors hover:bg-muted/50 ${
-                      !notification.read ? 'bg-primary/5' : ''
-                    }`}
+                    className="flex items-start gap-4 p-4 transition-colors hover:bg-muted/50"
                   >
                     <div className="mt-1">
                       {notification.type === 'system' && (
@@ -132,22 +316,21 @@ export default function NotificationsPage() {
                         <h4 className="text-sm font-semibold leading-none">
                           {notification.title}
                         </h4>
-                        {!notification.read && (
-                          <span className="h-2 w-2 rounded-full bg-primary" />
-                        )}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                        <span>{format(notification.date, 'MMM d, h:mm a')}</span>
-                        {notification.read && (
-                          <div className="flex items-center gap-1">
-                            <span>•</span>
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
-                            <span>Seen</span>
-                          </div>
-                        )}
+                        <span>
+                          {notification.date?.seconds 
+                            ? format(new Date(notification.date.seconds * 1000), 'MMM d, h:mm a') 
+                            : 'Just now'}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span>•</span>
+                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          <span>Delivered</span>
+                        </div>
                       </div>
                     </div>
                   </div>
