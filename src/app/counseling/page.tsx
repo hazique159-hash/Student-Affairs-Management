@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { HeartHandshake, UserPlus, Loader2, CalendarIcon } from 'lucide-react';
+import { HeartHandshake, UserPlus, Loader2, CalendarIcon, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,6 +57,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 
 import type { Teacher, TeacherAvailability, Student, CounselingSession } from '@/lib/types';
@@ -66,7 +78,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, doc, setDoc, getDocs, query, where, addDoc, collectionGroup } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, where, addDoc, collectionGroup, deleteDoc } from 'firebase/firestore';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeSlots = [
@@ -99,6 +111,7 @@ export default function CounselingPage() {
   const router = useRouter();
   const [isAvailSheetOpen, setIsAvailSheetOpen] = useState(false);
   const [isScheduleSheetOpen, setIsScheduleSheetOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
@@ -195,6 +208,7 @@ export default function CounselingPage() {
         dateScheduled: values.date,
         timeSlot: values.timeSlot,
         notes: '',
+        studentAuthId: studentAuthId, // Required for deletion
       };
       
       const sessionCollectionRef = collection(firestore, `users/${studentAuthId}/counselingSessions`);
@@ -206,6 +220,44 @@ export default function CounselingPage() {
       setIsScheduleSheetOpen(false);
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Failed to Schedule Session', description: error.message || 'An unexpected error occurred.' });
+    }
+  };
+
+  const handleDeleteSession = async (session: CounselingSession) => {
+    if (!firestore || !isAdmin) return;
+    
+    // We need the studentAuthId to construct the path.
+    // If it's missing from old records, we try to find it via studentId.
+    let studentAuthId = session.studentAuthId;
+    
+    setDeletingId(session.id);
+    
+    try {
+        if (!studentAuthId) {
+            const usersQuery = query(collection(firestore, 'users'), where('studentId', '==', session.studentId));
+            const userSnapshot = await getDocs(usersQuery);
+            if (!userSnapshot.empty) {
+                studentAuthId = userSnapshot.docs[0].id;
+            }
+        }
+
+        if (!studentAuthId) {
+            throw new Error("Could not determine the student path for this session.");
+        }
+
+        await deleteDoc(doc(firestore, `users/${studentAuthId}/counselingSessions`, session.id));
+        toast({
+            title: 'Session Removed',
+            description: 'The counseling session has been successfully deleted.',
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Delete Failed',
+            description: error.message || 'Could not delete the session.',
+        });
+    } finally {
+        setDeletingId(null);
     }
   };
 
@@ -352,6 +404,7 @@ export default function CounselingPage() {
                             <TableHead>Teacher</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Time</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -363,6 +416,29 @@ export default function CounselingPage() {
                                     <TableCell>{session.teacherName}</TableCell>
                                     <TableCell>{format(new Date(session.dateScheduled.seconds * 1000), 'PPP')}</TableCell>
                                     <TableCell>{session.timeSlot}</TableCell>
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive" disabled={deletingId === session.id}>
+                                                    {deletingId === session.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Cancel Counseling Session?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete the session for {session.studentName} with {session.teacherName}.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteSession(session)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                        Delete Session
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         }

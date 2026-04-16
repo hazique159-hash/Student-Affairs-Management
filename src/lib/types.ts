@@ -47,6 +47,7 @@ export type CounselingSession = {
   dateScheduled: any; // Firestore timestamp
   timeSlot: string;
   notes?: string;
+  studentAuthId?: string; // Firebase Auth UID for deletion path
 };
 
 export type Teacher = {
