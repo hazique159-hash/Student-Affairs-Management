@@ -1,4 +1,3 @@
-
 'use client';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -64,8 +63,9 @@ const studentSchema = z.object({
     .string()
     .min(1, { message: 'Registration number is required.' })
     .regex(/^[A-Z0-9]+$/, { 
-      message: 'Registration number must contain only capital letters and numbers (no special characters or spaces).' 
+      message: 'Registration number must contain only capital letters and numbers.' 
     }),
+  email: z.string().email({ message: 'Please enter a valid personal or institutional email.' }),
   phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 digits.' }),
   department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
@@ -85,6 +85,7 @@ export default function AddStudentPage() {
       firstName: '',
       lastName: '',
       registrationNumber: '',
+      email: '',
       phoneNumber: '',
       department: undefined,
       password: '',
@@ -92,18 +93,8 @@ export default function AddStudentPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof studentSchema>) => {
-    if (!firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firebase not initialized.',
-      });
-      return;
-    }
+    if (!firestore) return;
 
-    const studentEmail = `${values.registrationNumber}@student.com`;
-    
-    // Create a temporary, secondary Firebase app for user creation.
     const tempAppName = `temp-user-creation-${Date.now()}`;
     const tempApp = initializeApp(firebaseConfig, tempAppName);
     const tempAuth = getAuth(tempApp);
@@ -111,48 +102,45 @@ export default function AddStudentPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
-        studentEmail,
+        values.email,
         values.password
       );
       const user = userCredential.user;
 
       if (user) {
-        // Use the student's registration number as the document ID for simplicity and uniqueness.
-        const studentRef = doc(firestore, 'students', values.registrationNumber);
+        const regId = values.registrationNumber.toUpperCase();
+        const studentRef = doc(firestore, 'students', regId);
+        
         await setDoc(studentRef, {
-          id: values.registrationNumber,
-          registrationNumber: values.registrationNumber,
+          id: regId,
+          registrationNumber: regId,
           firstName: values.firstName,
           lastName: values.lastName,
-          email: studentEmail, // Ensure email is saved in the student profile for broadcasts
+          email: values.email,
           phoneNumber: values.phoneNumber,
           department: values.department,
-          parentEmail: '',
-          parentPhoneNumber: '',
           complaintCount: 0,
         });
         
-        // Also create a user document in the `users` collection for fines/counseling etc.
         const userRef = doc(firestore, 'users', user.uid);
         await setDoc(userRef, {
-          studentId: values.registrationNumber,
-          email: studentEmail
+          studentId: regId,
+          email: values.email
         });
 
         toast({
-          title: 'Student Added',
-          description: `Student account for ${values.registrationNumber} has been created.`,
+          title: 'Student Created',
+          description: `${values.firstName} can now log in with ${values.email}.`,
         });
         form.reset();
       }
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Failed to Add Student',
+        title: 'Creation Failed',
         description: error.message || 'An unexpected error occurred.',
       });
     } finally {
-        // Clean up the temporary app instance.
         await deleteApp(tempApp);
     }
   };
@@ -160,119 +148,64 @@ export default function AddStudentPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Add New Student"
+        title="Add Student"
         icon={UserPlus}
-        description="Create a new login account for a student."
+        description="Register a new student and set their login credentials."
       />
 
       <Card className="max-w-2xl mx-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
-              <CardTitle>Student Details</CardTitle>
-              <CardDescription>
-                Provide the student's information and a temporary password.
-              </CardDescription>
+              <CardTitle>Enrollment Details</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-6">
               <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Muhammad" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Haziq" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormField control={form.control} name="firstName" render={({ field }) => (
+                    <FormItem><FormLabel>First Name</FormLabel><FormControl><Input placeholder="Muhammad" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (
+                    <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input placeholder="Ali" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="registrationNumber"
-                  render={({ field }) => (
+                <FormField control={form.control} name="registrationNumber" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="BCS223089" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Only capital letters and numbers.
-                      </FormDescription>
-                      <FormMessage />
+                        <FormLabel>Registration ID</FormLabel>
+                        <FormControl><Input placeholder="BCS223089" {...field} /></FormControl>
+                        <FormDescription>Used for record tracking.</FormDescription>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
+                )} />
+                <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="03123456789" {...field} />
-                      </FormControl>
-                      <FormMessage />
+                        <FormLabel>Login Email</FormLabel>
+                        <FormControl><Input type="email" placeholder="student@gmail.com" {...field} /></FormControl>
+                        <FormDescription>Real email required for notifications.</FormDescription>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
+                )} />
               </div>
-               <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                    <FormItem><FormLabel>Phone No.</FormLabel><FormControl><Input placeholder="03123456789" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="department" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a department" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DEPARTMENTS.map((dept) => (
-                            <SelectItem key={dept} value={dept}>
-                              {dept}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger></FormControl>
+                            <SelectContent>{DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <FormMessage />
                     </FormItem>
-                  )}
-                />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Temporary Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                )} />
+              </div>
+              <FormField control={form.control} name="password" render={({ field }) => (
+                  <FormItem><FormLabel>Login Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormDescription>At least 6 characters.</FormDescription><FormMessage /></FormItem>
+              )} />
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="flex justify-end gap-2">
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Student Account

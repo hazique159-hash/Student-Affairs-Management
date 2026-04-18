@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from 'react';
-import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X, SendHorizontal, Mail } from 'lucide-react';
+import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X, SendHorizontal, Mail, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -50,7 +49,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { Notification, Student, Teacher } from '@/lib/types';
+import type { Notification, Student, Teacher, Admin } from '@/lib/types';
 import { sendBroadcastToEmails } from './actions';
 
 const notificationSchema = z.object({
@@ -74,12 +73,14 @@ export default function NotificationsPage() {
   );
   const { data: notifications, isLoading: isLoadingNotifications } = useCollection<Notification>(notificationsRef);
 
-  // Fetch students and teachers for harvesting emails (Admin only)
+  // Data for harvesting (Admin only)
   const studentsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'students') : null), [firestore]);
   const teachersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'teachers') : null), [firestore]);
+  const adminsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'roles_admin') : null), [firestore]);
   
   const { data: students } = useCollection<Student>(studentsRef);
   const { data: teachers } = useCollection<Teacher>(teachersRef);
+  const { data: admins } = useCollection<Admin>(adminsRef);
 
   const getRole = () => {
     const email = user?.email || '';
@@ -95,7 +96,6 @@ export default function NotificationsPage() {
   const role = getRole();
   const isAdmin = role === 'admin';
 
-  // Client-side filtering for notifications
   const filteredNotifications = notifications?.filter(n => n.targetRoles.includes(role)) || [];
 
   const form = useForm<z.infer<typeof notificationSchema>>({
@@ -113,25 +113,19 @@ export default function NotificationsPage() {
     setIsBroadcasting(true);
 
     try {
-      // 1. Create the in-app notification document
       await addDoc(collection(firestore, 'notifications'), {
         ...values,
         date: serverTimestamp(),
       });
 
-      // 2. Harvest all relevant emails based on roles
       const emailList = new Set<string>();
       
       if (values.targetRoles.includes('student')) {
         students?.forEach(s => {
-          // Add primary student email (either derived or stored)
-          const sEmail = s.email || `${s.id}@student.com`;
-          emailList.add(sEmail.toLowerCase());
-          
-          // Also notify parents if email is provided
-          if (s.parentEmail && s.parentEmail.trim() !== '') {
-            emailList.add(s.parentEmail.toLowerCase().trim());
-          }
+          if (s.email) emailList.add(s.email.toLowerCase().trim());
+          if (s.recoveryEmail) emailList.add(s.recoveryEmail.toLowerCase().trim());
+          if (s.parentEmail) emailList.add(s.parentEmail.toLowerCase().trim());
+          if (!s.email && !s.recoveryEmail) emailList.add(`${s.id}@student.com`.toLowerCase());
         });
       }
       
@@ -141,13 +135,26 @@ export default function NotificationsPage() {
         });
       }
 
-      // 3. Trigger the email broadcast via Server Action
-      const uniqueEmails = Array.from(emailList);
+      if (values.targetRoles.includes('admin')) {
+        admins?.forEach(a => {
+          if (a.email) emailList.add(a.email.toLowerCase().trim());
+          if (a.recoveryEmail) emailList.add(a.recoveryEmail.toLowerCase().trim());
+        });
+        // Always include the primary fallback if selecting admins
+        emailList.add('studentaffairs316@gmail.com');
+      }
+
+      const uniqueEmails = Array.from(emailList).filter(e => e.includes('@'));
       
+      // LOG TO BROWSER CONSOLE FOR DEBUGGING
+      console.log('--- HARVESTED EMAIL LIST ---');
+      console.log(uniqueEmails);
+      console.log('----------------------------');
+
       if (uniqueEmails.length === 0) {
         toast({
           title: 'Notification Created',
-          description: 'No email addresses were found for the selected roles, but the in-app alert was posted.',
+          description: 'No recipient emails were found, but the in-app alert was posted.',
         });
       } else {
         const result = await sendBroadcastToEmails(
@@ -157,8 +164,8 @@ export default function NotificationsPage() {
         );
 
         toast({
-          variant: result.success ? 'default' : 'destructive',
-          title: result.success ? 'Broadcast Processed' : 'Dispatch Error',
+          variant: result.success ? (result.isSimulated ? 'destructive' : 'default') : 'destructive',
+          title: result.isSimulated ? 'Simulation Active' : 'Broadcast Dispatch',
           description: result.message,
         });
       }
@@ -189,7 +196,7 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         icon={Bell}
-        description="Stay updated with the latest system alerts and personal notifications."
+        description="Stay updated with system alerts and personal notifications."
       >
         {isAdmin && (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -205,10 +212,10 @@ export default function NotificationsPage() {
                   <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                         <SendHorizontal className="h-5 w-5 text-primary" />
-                        Send New Notification
+                        Broadcast
                     </SheetTitle>
                     <SheetDescription>
-                      Broadcast a system alert and send email messages to all saved contacts.
+                      This will post an in-app alert and send an email to all harvested contacts.
                     </SheetDescription>
                   </SheetHeader>
                   <div className="py-6 space-y-6 flex-1 overflow-y-auto px-1">
@@ -219,7 +226,7 @@ export default function NotificationsPage() {
                         <FormItem>
                           <FormLabel>Title</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g., Upcoming Maintenance" {...field} />
+                            <Input placeholder="e.g., Campus Maintenance" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -230,10 +237,10 @@ export default function NotificationsPage() {
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Message</FormLabel>
+                          <FormLabel>Message Content</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Describe the details..."
+                              placeholder="Write your message here..."
                               className="min-h-[100px]"
                               {...field}
                             />
@@ -247,7 +254,7 @@ export default function NotificationsPage() {
                       name="type"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Notification Type</FormLabel>
+                          <FormLabel>Type</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -260,7 +267,6 @@ export default function NotificationsPage() {
                               <SelectItem value="calendar">Calendar (Purple)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -271,42 +277,30 @@ export default function NotificationsPage() {
                         <FormItem>
                           <div className="mb-4">
                             <FormLabel>Target Audience</FormLabel>
-                            <FormDescription>
-                              Recipients will receive an in-app alert and an email.
-                            </FormDescription>
                           </div>
-                          <div className="space-y-2">
-                            {['teacher', 'student'].map((roleItem) => (
+                          <div className="grid grid-cols-2 gap-2">
+                            {['teacher', 'student', 'admin'].map((roleItem) => (
                               <FormField
                                 key={roleItem}
                                 control={form.control}
                                 name="targetRoles"
-                                render={({ field }) => {
-                                  return (
-                                    <FormItem
-                                      key={roleItem}
-                                      className="flex flex-row items-start space-x-3 space-y-0"
-                                    >
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(roleItem)}
-                                          onCheckedChange={(checked) => {
-                                            return checked
-                                              ? field.onChange([...field.value, roleItem])
-                                              : field.onChange(
-                                                  field.value?.filter(
-                                                    (value) => value !== roleItem
-                                                  )
-                                                )
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="font-normal capitalize">
-                                        {roleItem}s
-                                      </FormLabel>
-                                    </FormItem>
-                                  )
-                                }}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(roleItem)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([...field.value, roleItem])
+                                            : field.onChange(field.value?.filter(v => v !== roleItem))
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal capitalize">
+                                      {roleItem}s
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
                               />
                             ))}
                           </div>
@@ -315,9 +309,13 @@ export default function NotificationsPage() {
                       )}
                     />
                     
-                    <div className="bg-muted p-3 rounded-md text-[10px] text-muted-foreground flex items-start gap-2 border">
-                        <Mail className="h-3 w-3 mt-0.5" />
-                        <p>Emails will be harvested automatically from the <strong>Students</strong> (including Parents) and <strong>Teachers</strong> records based on your selection.</p>
+                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-[11px] text-amber-800 space-y-2">
+                        <div className="flex items-center gap-2 font-bold uppercase">
+                            <AlertTriangle className="h-3 w-3" />
+                            Mail Service Note
+                        </div>
+                        <p>Real emails require <strong>RESEND_API_KEY</strong> in your .env file. Without it, the system only simulates the send.</p>
+                        <p>Addresses harvested from: <strong>Students</strong> (Primary, Recovery, Parents), <strong>Teachers</strong>, and <strong>Admins</strong>.</p>
                     </div>
                   </div>
                   <SheetFooter className="pt-4 border-t">
@@ -325,11 +323,7 @@ export default function NotificationsPage() {
                       <Button variant="outline">Cancel</Button>
                     </SheetClose>
                     <Button type="submit" disabled={form.formState.isSubmitting || isBroadcasting}>
-                      {isBroadcasting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <SendHorizontal className="mr-2 h-4 w-4" />
-                      )}
+                      {isBroadcasting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="mr-2 h-4 w-4" />}
                       Send Broadcast
                     </Button>
                   </SheetFooter>
@@ -340,77 +334,38 @@ export default function NotificationsPage() {
         )}
       </PageHeader>
 
-      <Card className="max-w-4xl mx-auto border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm">
-        <CardHeader className="px-4 sm:px-6">
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Inbound Alerts</CardTitle>
-              <CardDescription>Review recent activity related to your account.</CardDescription>
-            </div>
-            <Badge variant="outline" className="text-[10px] uppercase tracking-tighter">
-              {filteredNotifications.length} Total
-            </Badge>
+            <CardTitle>Inbound Alerts</CardTitle>
+            <Badge variant="outline">{filteredNotifications.length} Active</Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6">
-          <ScrollArea className="h-[calc(100vh-280px)] sm:h-auto">
-            <div className="divide-y border-t sm:border-none">
+        <CardContent className="p-0">
+          <ScrollArea className="h-[calc(100vh-280px)]">
+            <div className="divide-y">
               {filteredNotifications.length > 0 ? (
                 filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="flex items-start gap-4 p-4 transition-colors hover:bg-muted/50"
-                  >
+                  <div key={notification.id} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors">
                     <div className="mt-1">
-                      {notification.type === 'system' && (
-                        <div className="bg-blue-100 p-2 rounded-full">
-                          <Info className="h-4 w-4 text-blue-600" />
-                        </div>
-                      )}
-                      {notification.type === 'security' && (
-                        <div className="bg-destructive/10 p-2 rounded-full">
-                          <ShieldAlert className="h-4 w-4 text-destructive" />
-                        </div>
-                      )}
-                      {notification.type === 'calendar' && (
-                        <div className="bg-accent/10 p-2 rounded-full">
-                          <Calendar className="h-4 w-4 text-accent" />
-                        </div>
-                      )}
+                      {notification.type === 'system' && <div className="bg-blue-100 p-2 rounded-full"><Info className="h-4 w-4 text-blue-600" /></div>}
+                      {notification.type === 'security' && <div className="bg-red-100 p-2 rounded-full"><ShieldAlert className="h-4 w-4 text-red-600" /></div>}
+                      {notification.type === 'calendar' && <div className="bg-purple-100 p-2 rounded-full"><Calendar className="h-4 w-4 text-purple-600" /></div>}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-sm font-semibold leading-none">
-                          {notification.title}
-                        </h4>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {notification.message}
-                      </p>
-                      <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                        <span>
-                          {notification.date?.seconds 
-                            ? format(new Date(notification.date.seconds * 1000), 'MMM d, h:mm a') 
-                            : 'Just now'}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <span>•</span>
-                          <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          <span>Delivered</span>
-                        </div>
+                      <h4 className="text-sm font-semibold">{notification.title}</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{notification.message}</p>
+                      <div className="flex items-center gap-2 pt-2 text-[10px] text-muted-foreground uppercase font-bold">
+                        <span>{notification.date?.seconds ? format(new Date(notification.date.seconds * 1000), 'PPP p') : 'Just now'}</span>
+                        <Badge className="h-3.5 px-1 bg-green-500 text-white border-none text-[8px]">Delivered</Badge>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                  <div className="bg-muted p-4 rounded-full">
-                    <Bell className="h-8 w-8 text-muted-foreground opacity-20" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-semibold text-muted-foreground">All caught up!</p>
-                    <p className="text-xs text-muted-foreground">No new notifications at this time.</p>
-                  </div>
+                <div className="py-20 text-center text-muted-foreground">
+                  <Bell className="h-10 w-10 mx-auto mb-4 opacity-10" />
+                  <p>No new notifications.</p>
                 </div>
               )}
             </div>
