@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X } from 'lucide-react';
+import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X, SendHorizontal, Mail } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -50,7 +50,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import type { Notification } from '@/lib/types';
+import type { Notification, Student, Teacher } from '@/lib/types';
+import { sendBroadcastToEmails } from './actions';
 
 const notificationSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
@@ -64,12 +65,21 @@ export default function NotificationsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
+  // Fetch notifications
   const notificationsRef = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'notifications'), orderBy('date', 'desc')) : null),
     [firestore]
   );
   const { data: notifications, isLoading: isLoadingNotifications } = useCollection<Notification>(notificationsRef);
+
+  // Fetch students and teachers for harvesting emails (Admin only)
+  const studentsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'students') : null), [firestore]);
+  const teachersRef = useMemoFirebase(() => (firestore ? collection(firestore, 'teachers') : null), [firestore]);
+  
+  const { data: students } = useCollection<Student>(studentsRef);
+  const { data: teachers } = useCollection<Teacher>(teachersRef);
 
   const getRole = () => {
     const email = user?.email || '';
@@ -100,24 +110,55 @@ export default function NotificationsPage() {
 
   const onSubmit = async (values: z.infer<typeof notificationSchema>) => {
     if (!firestore) return;
+    setIsBroadcasting(true);
 
     try {
+      // 1. Create the in-app notification document
       await addDoc(collection(firestore, 'notifications'), {
         ...values,
         date: serverTimestamp(),
       });
+
+      // 2. Harvest all relevant emails based on roles
+      const emailList = new Set<string>();
+      
+      if (values.targetRoles.includes('student')) {
+        students?.forEach(s => {
+          if (s.email) emailList.add(s.email);
+          // Also notify parents if email is provided
+          if (s.parentEmail) emailList.add(s.parentEmail);
+        });
+      }
+      
+      if (values.targetRoles.includes('teacher')) {
+        teachers?.forEach(t => {
+          if (t.email) emailList.add(t.email);
+        });
+      }
+
+      // 3. Trigger the email broadcast via Server Action
+      const uniqueEmails = Array.from(emailList);
+      const result = await sendBroadcastToEmails(
+        values.title,
+        values.message,
+        uniqueEmails
+      );
+
       toast({
-        title: 'Notification Sent',
-        description: 'Your notification has been dispatched to the selected users.',
+        title: 'Broadcast Sent',
+        description: result.message,
       });
+
       form.reset();
       setIsSheetOpen(false);
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Failed to Send',
+        title: 'Broadcast Failed',
         description: error.message || 'An unexpected error occurred.',
       });
+    } finally {
+      setIsBroadcasting(false);
     }
   };
 
@@ -144,13 +185,16 @@ export default function NotificationsPage() {
                 New Notification
               </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="sm:max-w-md">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
                   <SheetHeader>
-                    <SheetTitle>Send New Notification</SheetTitle>
+                    <SheetTitle className="flex items-center gap-2">
+                        <SendHorizontal className="h-5 w-5 text-primary" />
+                        Send New Notification
+                    </SheetTitle>
                     <SheetDescription>
-                      Broadcast a system alert or reminder to students and teachers.
+                      Broadcast a system alert and send email messages to all saved contacts.
                     </SheetDescription>
                   </SheetHeader>
                   <div className="py-6 space-y-6 flex-1 overflow-y-auto px-1">
@@ -214,11 +258,11 @@ export default function NotificationsPage() {
                           <div className="mb-4">
                             <FormLabel>Target Audience</FormLabel>
                             <FormDescription>
-                              Select who should receive this notification.
+                              Recipients will receive an in-app alert and an email.
                             </FormDescription>
                           </div>
                           <div className="space-y-2">
-                            {['admin', 'teacher', 'student'].map((roleItem) => (
+                            {['teacher', 'student'].map((roleItem) => (
                               <FormField
                                 key={roleItem}
                                 control={form.control}
@@ -256,13 +300,22 @@ export default function NotificationsPage() {
                         </FormItem>
                       )}
                     />
+                    
+                    <div className="bg-muted p-3 rounded-md text-[10px] text-muted-foreground flex items-start gap-2 border">
+                        <Mail className="h-3 w-3 mt-0.5" />
+                        <p>Emails will be harvested automatically from the <strong>Students</strong> (including Parents) and <strong>Teachers</strong> records based on your selection.</p>
+                    </div>
                   </div>
-                  <SheetFooter>
+                  <SheetFooter className="pt-4 border-t">
                     <SheetClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </SheetClose>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button type="submit" disabled={form.formState.isSubmitting || isBroadcasting}>
+                      {isBroadcasting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <SendHorizontal className="mr-2 h-4 w-4" />
+                      )}
                       Send Broadcast
                     </Button>
                   </SheetFooter>
