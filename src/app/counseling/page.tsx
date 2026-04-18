@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { HeartHandshake, UserPlus, Loader2, CalendarIcon, Trash2, AlertCircle } from 'lucide-react';
+import { HeartHandshake, UserPlus, Loader2, CalendarIcon, Trash2, AlertCircle, MessageCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -67,7 +68,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 import type { Teacher, TeacherAvailability, Student, CounselingSession } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -78,6 +79,7 @@ import {
   useUser,
 } from '@/firebase';
 import { collection, doc, setDoc, getDocs, query, where, addDoc, collectionGroup, deleteDoc } from 'firebase/firestore';
+import { sendTargetedNotification } from '../notifications/actions';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeSlots = [
@@ -204,6 +206,8 @@ export default function CounselingPage() {
       if (userSnapshot.empty) throw new Error(`User account for student ${values.studentId} not found.`);
       
       const studentAuthId = userSnapshot.docs[0].id;
+      const formattedDate = format(values.date, "PPPP");
+      
       const sessionData = {
         studentId: values.studentId,
         studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
@@ -219,7 +223,16 @@ export default function CounselingPage() {
       const newDoc = await addDoc(sessionCollectionRef, sessionData);
       await setDoc(doc(sessionCollectionRef, newDoc.id), { id: newDoc.id }, { merge: true });
 
-      toast({ title: 'Session Scheduled', description: `Counseling session scheduled for ${selectedStudent.firstName}.` });
+      // AUTOMATED NOTIFICATION
+      const studentEmail = selectedStudent.email || `${selectedStudent.id}@student.com`;
+      await sendTargetedNotification(
+        studentEmail,
+        'Counseling Session Scheduled',
+        'Counseling Appointment Confirmed',
+        `Dear ${selectedStudent.firstName},\n\nA mandatory counseling session has been scheduled for you.\n\nCounselor: ${selectedAvailability.teacherName}\nDate: ${formattedDate}\nTime Slot: ${values.timeSlot}\n\nPlease ensure your presence at the Student Affairs office 5 minutes before your slot.`
+      );
+
+      toast({ title: 'Session Scheduled', description: `Counseling scheduled for ${selectedStudent.firstName}. Student notified via email.` });
       scheduleForm.reset();
       setIsScheduleSheetOpen(false);
     } catch (error: any) {
@@ -260,6 +273,17 @@ export default function CounselingPage() {
     } finally {
         setDeletingId(null);
     }
+  };
+
+  const openWhatsApp = (session: CounselingSession) => {
+    const student = students?.find(s => s.id === session.studentId);
+    const phone = student?.phoneNumber || student?.phone;
+    if (!phone) {
+        toast({ variant: 'destructive', title: 'No phone number', description: 'Student has no contact number saved.' });
+        return;
+    }
+    const message = encodeURIComponent(`Hi ${session.studentName}, this is AffairsConnect. Your counseling session with ${session.teacherName} is scheduled for ${format(new Date(session.dateScheduled.seconds * 1000), 'PPP')} at ${session.timeSlot}. Please confirm.`);
+    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
   };
 
   if (isUserLoading || !isAdmin) {
@@ -423,53 +447,69 @@ export default function CounselingPage() {
             {isLoadingSessions ? (
                 <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : scheduledSessions && scheduledSessions.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Student</TableHead>
-                            <TableHead>Teacher</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Time</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {scheduledSessions
-                            .sort((a, b) => a.dateScheduled.seconds - b.dateScheduled.seconds)
-                            .map((session) => (
-                                <TableRow key={session.id}>
-                                    <TableCell>{session.studentName}</TableCell>
-                                    <TableCell>{session.teacherName}</TableCell>
-                                    <TableCell>{format(new Date(session.dateScheduled.seconds * 1000), 'PPP')}</TableCell>
-                                    <TableCell>{session.timeSlot}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="text-destructive" disabled={deletingId === session.id}>
-                                                    {deletingId === session.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Cancel Counseling Session?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently delete the session for {session.studentName} with {session.teacherName}.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteSession(session)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                        Delete Session
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        }
-                    </TableBody>
-                </Table>
+                <TooltipProvider>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Student</TableHead>
+                                <TableHead>Teacher</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Time</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {scheduledSessions
+                                .sort((a, b) => a.dateScheduled.seconds - b.dateScheduled.seconds)
+                                .map((session) => (
+                                    <TableRow key={session.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{session.studentName}</div>
+                                            <div className="text-xs text-muted-foreground">{session.studentId}</div>
+                                        </TableCell>
+                                        <TableCell>{session.teacherName}</TableCell>
+                                        <TableCell>{format(new Date(session.dateScheduled.seconds * 1000), 'PPP')}</TableCell>
+                                        <TableCell>{session.timeSlot}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700" onClick={() => openWhatsApp(session)}>
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>WhatsApp Reminder</TooltipContent>
+                                                </Tooltip>
+
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-destructive" disabled={deletingId === session.id}>
+                                                            {deletingId === session.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Cancel Counseling Session?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This will permanently delete the session for {session.studentName} with {session.teacherName}.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteSession(session)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                Delete Session
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            }
+                        </TableBody>
+                    </Table>
+                </TooltipProvider>
             ) : (
                 <div className="flex items-center justify-center h-24"><p className="text-muted-foreground">No upcoming sessions.</p></div>
             )}
