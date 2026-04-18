@@ -38,6 +38,15 @@ export type Announcement = {
   imageUrl?: string;
 };
 
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  date: any;
+  type: 'system' | 'security' | 'calendar';
+  targetRoles: string[];
+};
+
 export type CounselingSession = {
   id: string;
   studentId: string; // registration number
@@ -47,6 +56,7 @@ export type CounselingSession = {
   dateScheduled: any; // Firestore timestamp
   timeSlot: string;
   notes?: string;
+  studentAuthId?: string; // Firebase Auth UID for deletion path
 };
 
 export type Teacher = {

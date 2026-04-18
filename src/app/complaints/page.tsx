@@ -1,5 +1,6 @@
+
 'use client';
-import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye, CheckCircle } from 'lucide-react';
+import { ShieldQuestion, Loader2, Trash2, Search, Download, Eye, MessageCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -52,9 +53,10 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Image from 'next/image';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { sendTargetedNotification } from '../notifications/actions';
 
 export default function ComplaintsPage() {
   const { user, isUserLoading } = useUser();
@@ -87,12 +89,9 @@ export default function ComplaintsPage() {
   );
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsRef);
 
-  const studentComplaintCounts = useMemo(() => {
-    if (!students) return {};
-    return students.reduce((acc, student) => {
-      acc[student.id] = student.complaintCount ?? 0;
-      return acc;
-    }, {} as Record<string, number>);
+  const studentMap = useMemo(() => {
+    if (!students) return new Map<string, Student>();
+    return new Map(students.map(s => [s.id, s]));
   }, [students]);
 
   const filteredComplaints = useMemo(() => {
@@ -120,6 +119,7 @@ export default function ComplaintsPage() {
     try {
         const batch = writeBatch(firestore);
         const regId = complaint.studentId.toUpperCase();
+        const student = studentMap.get(regId);
 
         const updateData: Partial<Complaint> = { status: newStatus };
         if (newStatus === 'Resolved') {
@@ -132,6 +132,17 @@ export default function ComplaintsPage() {
         if (newStatus === 'Approved') {
             const studentRef = doc(firestore, 'students', regId);
             batch.update(studentRef, { complaintCount: increment(1) });
+
+            // AUTOMATED EMAIL NOTIFICATION
+            if (student) {
+                const studentEmail = student.email || `${student.id}@student.com`;
+                await sendTargetedNotification(
+                    studentEmail,
+                    'Fine Issued - AffairsConnect',
+                    'Disciplinary Fine Notification',
+                    `Dear ${student.firstName},\n\nA violation report filed against you has been Approved.\n\nViolation: ${complaint.title}\nFine Amount: Rs. 1000\n\nPlease log in to the Student Portal (Violation Portal) to view details and upload your payment receipt via Easypaisa to avoid further disciplinary action.`
+                );
+            }
         }
 
         const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', regId));
@@ -148,7 +159,7 @@ export default function ComplaintsPage() {
         }
         
         await batch.commit();
-        toast({ title: `Status updated: ${newStatus}` });
+        toast({ title: `Status updated: ${newStatus}`, description: newStatus === 'Approved' ? 'Student has been notified via email.' : '' });
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
     } finally {
@@ -182,6 +193,17 @@ export default function ComplaintsPage() {
     }
   };
 
+  const openWhatsApp = (complaint: Complaint) => {
+    const student = studentMap.get(complaint.studentId.toUpperCase());
+    const phone = student?.phoneNumber || student?.phone;
+    if (!phone) {
+        toast({ variant: 'destructive', title: 'No phone number', description: 'Student contact not found.' });
+        return;
+    }
+    const message = encodeURIComponent(`Hi ${complaint.studentName}, AffairsConnect here. A disciplinary fine has been issued for: ${complaint.title}. Please check your portal to settle the payment.`);
+    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+  };
+
   const handleDownloadPDF = () => {
     if (!filteredComplaints.length) return;
     const pdf = new jsPDF();
@@ -203,7 +225,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="space-y-4 pb-10">
-      <PageHeader title="Complaint Management" icon={ShieldQuestion} description="Review violation reports.">
+      <PageHeader title="Violation Inbox" icon={ShieldQuestion} description="Review misconduct reports and issue fines.">
         <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={!filteredComplaints.length} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" /> Download PDF
         </Button>
@@ -213,7 +235,7 @@ export default function ComplaintsPage() {
         <CardHeader className="p-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-                <CardTitle className="text-lg">Complaint Inbox</CardTitle>
+                <CardTitle className="text-lg">Reports Feed</CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="relative w-full sm:w-64">
@@ -235,69 +257,79 @@ export default function ComplaintsPage() {
         </CardHeader>
         <CardContent className="px-0 sm:px-4 pb-4">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[120px] text-xs">Student</TableHead>
-                  <TableHead className="text-xs">Count</TableHead>
-                  <TableHead className="min-w-[150px] text-xs">Violation</TableHead>
-                  <TableHead className="min-w-[120px] text-xs">Fine</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-right text-xs">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredComplaints.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div className="font-medium text-xs truncate max-w-[100px]">{c.studentName}</div>
-                      <div className="text-[10px] text-muted-foreground">{c.studentId}</div>
-                    </TableCell>
-                    <TableCell><Badge variant={(studentComplaintCounts[c.studentId] || 0) > 2 ? 'destructive' : 'outline'} className="text-[10px]">{studentComplaintCounts[c.studentId] || 0}</Badge></TableCell>
-                    <TableCell className="max-w-[150px] truncate text-xs">{c.title}</TableCell>
-                    <TableCell>
-                      {c.status === 'Approved' && (
-                          <div className="flex items-center gap-2">
-                            <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'} className="text-[10px]">
-                                {c.paymentStatus === 'Submitted' ? 'Submitted' : 'Unpaid'}
-                            </Badge>
-                            {c.paymentReceiptUrl && (
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
-                                  <Eye className="h-3 w-3" />
-                                </Button>
+            <TooltipProvider>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead className="min-w-[120px] text-xs">Student</TableHead>
+                        <TableHead className="text-xs">Count</TableHead>
+                        <TableHead className="min-w-[150px] text-xs">Violation</TableHead>
+                        <TableHead className="min-w-[120px] text-xs">Fine Status</TableHead>
+                        <TableHead className="text-xs">Review</TableHead>
+                        <TableHead className="text-right text-xs">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredComplaints.map((c) => (
+                        <TableRow key={c.id}>
+                            <TableCell>
+                            <div className="font-medium text-xs truncate max-w-[100px]">{c.studentName}</div>
+                            <div className="text-[10px] text-muted-foreground">{c.studentId}</div>
+                            </TableCell>
+                            <TableCell><Badge variant={(studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0) > 2 ? 'destructive' : 'outline'} className="text-[10px]">{studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0}</Badge></TableCell>
+                            <TableCell className="max-w-[150px] truncate text-xs">{c.title}</TableCell>
+                            <TableCell>
+                            {c.status === 'Approved' && (
+                                <div className="flex items-center gap-2">
+                                    <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'} className="text-[10px]">
+                                        {c.paymentStatus === 'Submitted' ? 'Receipt Uploaded' : 'Unpaid'}
+                                    </Badge>
+                                    {c.paymentReceiptUrl && (
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
+                                        <Eye className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                </div>
                             )}
-                          </div>
-                      )}
-                      {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Verified</Badge>}
-                    </TableCell>
-                    <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'} className="text-[10px]">{c.status}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                          {c.status === 'Pending' && (
-                              <div className="flex gap-1">
-                                  <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
-                                  <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
-                              </div>
-                          )}
-                          {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
-                              <Button size="sm" className="h-7 px-2 bg-green-600 hover:bg-green-700 text-[10px]" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
-                                  Verify
-                              </Button>
-                          )}
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setViewingComplaint(c)}>Details</Button>
-                          <AlertDialog>
-                              <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></AlertDialogTrigger>
-                              <AlertDialogContent>
-                                  <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
-                                  <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
-                              </AlertDialogContent>
-                          </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                            {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Fine Settled</Badge>}
+                            </TableCell>
+                            <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'} className="text-[10px]">{c.status}</Badge></TableCell>
+                            <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                                {c.status === 'Pending' && (
+                                    <div className="flex gap-1">
+                                        <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
+                                        <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
+                                    </div>
+                                )}
+                                {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
+                                    <Button size="sm" className="h-7 px-2 bg-green-600 hover:bg-green-700 text-[10px]" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
+                                        Verify Payment
+                                    </Button>
+                                )}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={() => openWhatsApp(c)}>
+                                            <MessageCircle className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>WhatsApp Student</TooltipContent>
+                                </Tooltip>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setViewingComplaint(c)}>Details</Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                            </TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
