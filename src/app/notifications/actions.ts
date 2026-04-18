@@ -1,14 +1,13 @@
+
 'use server';
 
 import { Resend } from 'resend';
 
 /**
- * @fileOverview Server action for processing notification broadcasts.
+ * @fileOverview Server action for processing notification broadcasts via Resend.
  */
 
-const resend = process.env.RESEND_API_KEY 
-  ? new Resend(process.env.RESEND_API_KEY) 
-  : null;
+const resend = new Resend(process.env.RESEND_API_KEY || 're_fdEuxFMi_9XkgZzWpba7wXcQWUuyyw99S');
 
 interface BroadcastResult {
   success: boolean;
@@ -35,19 +34,9 @@ export async function sendBroadcastToEmails(
 
   console.log(`[BROADCAST] Dispatching: "${title}" to ${uniqueEmails.length} recipients.`);
 
-  if (!resend) {
-    console.warn('[BROADCAST] RESEND_API_KEY is missing from environment variables.');
-    return {
-      success: true,
-      count: uniqueEmails.length,
-      isSimulated: true,
-      message: `SIMULATION: Found ${uniqueEmails.length} recipients. Add RESEND_API_KEY to your .env file to send real emails to Gmail.`,
-    };
-  }
-
   try {
-    // Note: Resend Free tier (onboarding@resend.dev) only allows sending to the address 
-    // associated with the Resend account owner.
+    // Note: Resend Free tier (onboarding@resend.dev) usually only allows sending 
+    // to the email address registered with the Resend account (e.g., hazique159@gmail.com).
     const { data, error } = await resend.emails.send({
       from: 'AffairsConnect <onboarding@resend.dev>',
       to: uniqueEmails,
