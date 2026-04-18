@@ -35,16 +35,16 @@ export async function sendBroadcastToEmails(
   console.log(`[BROADCAST] Dispatching: "${title}" to ${uniqueEmails.length} recipients.`);
 
   try {
-    // Note: Resend Free tier (onboarding@resend.dev) usually only allows sending 
-    // to the email address registered with the Resend account (e.g., hazique159@gmail.com).
+    // Once your DNS records from the screenshot are verified, 
+    // this sender address will be authorized.
     const { data, error } = await resend.emails.send({
-      from: 'AffairsConnect <onboarding@resend.dev>',
+      from: 'AffairsConnect <notifications@student.affair.com>',
       to: uniqueEmails,
       subject: `[AffairsConnect] ${title}`,
       text: content,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">${title}</h2>
+          <h2 style="color: #3F51B5; border-bottom: 2px solid #3F51B5; padding-bottom: 10px;">${title}</h2>
           <p style="white-space: pre-wrap; font-size: 16px; line-height: 1.6;">${content}</p>
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center;">
             <p>This is an automated notification from AffairsConnect Student Affairs Management System.</p>
@@ -62,7 +62,7 @@ export async function sendBroadcastToEmails(
       success: true,
       count: uniqueEmails.length,
       isSimulated: false,
-      message: `Successfully dispatched to ${uniqueEmails.length} recipients via Resend.`,
+      message: `Successfully dispatched to ${uniqueEmails.length} recipients via @student.affair.com.`,
     };
   } catch (err: any) {
     console.error('[BROADCAST] Delivery Failed:', err);
