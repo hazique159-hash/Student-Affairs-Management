@@ -124,6 +124,7 @@ export default function AddStudentPage() {
           registrationNumber: values.registrationNumber,
           firstName: values.firstName,
           lastName: values.lastName,
+          email: studentEmail, // Ensure email is saved in the student profile for broadcasts
           phoneNumber: values.phoneNumber,
           department: values.department,
           parentEmail: '',

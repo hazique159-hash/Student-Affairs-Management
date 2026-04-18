@@ -124,37 +124,51 @@ export default function NotificationsPage() {
       
       if (values.targetRoles.includes('student')) {
         students?.forEach(s => {
-          if (s.email) emailList.add(s.email);
+          // Add primary student email (either derived or stored)
+          const sEmail = s.email || `${s.id}@student.com`;
+          emailList.add(sEmail.toLowerCase());
+          
           // Also notify parents if email is provided
-          if (s.parentEmail) emailList.add(s.parentEmail);
+          if (s.parentEmail && s.parentEmail.trim() !== '') {
+            emailList.add(s.parentEmail.toLowerCase().trim());
+          }
         });
       }
       
       if (values.targetRoles.includes('teacher')) {
         teachers?.forEach(t => {
-          if (t.email) emailList.add(t.email);
+          if (t.email) emailList.add(t.email.toLowerCase().trim());
         });
       }
 
       // 3. Trigger the email broadcast via Server Action
       const uniqueEmails = Array.from(emailList);
-      const result = await sendBroadcastToEmails(
-        values.title,
-        values.message,
-        uniqueEmails
-      );
+      
+      if (uniqueEmails.length === 0) {
+        toast({
+          title: 'Notification Created',
+          description: 'No email addresses were found for the selected roles, but the in-app alert was posted.',
+        });
+      } else {
+        const result = await sendBroadcastToEmails(
+          values.title,
+          values.message,
+          uniqueEmails
+        );
 
-      toast({
-        title: 'Broadcast Sent',
-        description: result.message,
-      });
+        toast({
+          variant: result.success ? 'default' : 'destructive',
+          title: result.success ? 'Broadcast Processed' : 'Dispatch Error',
+          description: result.message,
+        });
+      }
 
       form.reset();
       setIsSheetOpen(false);
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Broadcast Failed',
+        title: 'Operation Failed',
         description: error.message || 'An unexpected error occurred.',
       });
     } finally {
