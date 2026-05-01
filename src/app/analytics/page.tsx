@@ -13,7 +13,7 @@ import {
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Student, Teacher, Complaint } from '@/lib/types';
-import { format, subDays, isAfter } from 'date-fns';
+import { format, subDays, isAfter, startOfDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,6 +33,16 @@ const DEPARTMENTS = [
   'Bioinformatics & Biosciences',
   'Pharmacy',
   'Law',
+] as const;
+
+const TIME_RANGES = [
+  'Today',
+  'Last 7 Days',
+  'Last 30 Days',
+  'Last 90 Days',
+  'Last 180 Days',
+  'Last 365 Days',
+  'All Time',
 ] as const;
 
 export default function AnalyticsPage() {
@@ -79,8 +89,19 @@ export default function AnalyticsPage() {
 
     // Time Filtering
     if (timeFilter !== 'All Time') {
-      const days = timeFilter === 'Last 7 Days' ? 7 : 30;
-      const cutoff = subDays(new Date(), days);
+      let cutoff: Date;
+      const now = new Date();
+      
+      switch (timeFilter) {
+        case 'Today': cutoff = startOfDay(now); break;
+        case 'Last 7 Days': cutoff = subDays(now, 7); break;
+        case 'Last 30 Days': cutoff = subDays(now, 30); break;
+        case 'Last 90 Days': cutoff = subDays(now, 90); break;
+        case 'Last 180 Days': cutoff = subDays(now, 180); break;
+        case 'Last 365 Days': cutoff = subDays(now, 365); break;
+        default: cutoff = new Date(0);
+      }
+
       complaints = complaints.filter(c => {
         if (!c.dateSubmitted?.seconds) return false;
         return isAfter(new Date(c.dateSubmitted.seconds * 1000), cutoff);
@@ -119,16 +140,16 @@ export default function AnalyticsPage() {
                         <SelectValue placeholder="Time Range" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="All Time" className="text-xs">All Time</SelectItem>
-                        <SelectItem value="Last 7 Days" className="text-xs">Last 7 Days</SelectItem>
-                        <SelectItem value="Last 30 Days" className="text-xs">Last 30 Days</SelectItem>
+                        {TIME_RANGES.map(range => (
+                          <SelectItem key={range} value={range} className="text-xs">{range}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
             </div>
         </div>
       </div>
 
-      {/* KPI Cards - Forced white background for maximum visibility */}
+      {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-md border-l-4 border-l-[#4F46E5] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -156,7 +177,7 @@ export default function AnalyticsPage() {
 
         <Card className="shadow-md border-l-4 border-l-[#2563EB] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Reports</CardTitle>
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Reports</CardTitle>
             <MessageSquareWarning className="h-4 w-4 text-[#2563EB]" />
           </CardHeader>
           <CardContent>
@@ -179,7 +200,6 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Main Visuals Grid */}
       <div className="grid gap-6 lg:grid-cols-4 items-stretch">
         <div className="lg:col-span-3">
           <AnalyticsChart 
@@ -191,7 +211,6 @@ export default function AnalyticsPage() {
           />
         </div>
 
-        {/* Recent Activity Card - Forced white background */}
         <Card className="flex flex-col shadow-lg bg-white dark:bg-card h-full min-h-[400px]">
           <CardHeader className="border-b bg-muted/20 p-4">
             <div className="flex items-center gap-2">
