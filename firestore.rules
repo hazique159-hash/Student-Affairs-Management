@@ -63,11 +63,15 @@ service cloud.firestore {
     match /complaints/{complaintId} {
       allow get, list, delete: if isAdmin();
       allow create: if isSignedIn();
-      // Allow students to update payment info on their own violations
       allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentReceiptUrl']));
     }
 
     match /fines/{fineId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /counseling_availability/{availabilityId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }

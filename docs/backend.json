@@ -619,6 +619,22 @@
         }
       },
       {
+        "path": "/counseling_availability/{availabilityId}",
+        "definition": {
+          "entityName": "TeacherAvailability",
+          "schema": {
+            "$ref": "#/backend/entities/TeacherAvailability"
+          },
+          "description": "Collection to store teacher availability for counseling.",
+          "params": [
+            {
+              "name": "availabilityId",
+              "description": "The unique ID of the availability record."
+            }
+          ]
+        }
+      },
+      {
         "path": "/users/{userId}/counselingSessions/{counselingSessionId}",
         "definition": {
           "entityName": "CounselingSession",
