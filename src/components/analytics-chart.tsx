@@ -11,20 +11,20 @@ import { Loader2, PieChart as PieIcon, BarChart3 } from "lucide-react";
 const chartConfig = {
   students: {
     label: "Students",
-    color: "#4F46E5", // Dark Blue
+    color: "#4F46E5", // Deep Indigo
   },
   teachers: {
     label: "Teachers",
-    color: "#A78BFA", // Light Purple
+    color: "#A78BFA", // Soft Purple
   },
   complaints: {
     label: "Complaints",
-    color: "#1E293B", // Dark Teal/Charcoal
+    color: "#1E293B", // Dark Charcoal
   },
 } satisfies ChartConfig;
 
 const PIE_COLORS = {
-  Approved: "#3B82F6", // Blue
+  Approved: "#3B82F6", // Professional Blue
   Resolved: "#8B5CF6", // Purple
   Rejected: "#64748B", // Grey
   Pending: "#EF4444", // Red
@@ -69,8 +69,8 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading, dept
 
   return (
     <div className="grid gap-6 md:grid-cols-2 h-full">
-      {/* Bar Chart Card (Summary) - Using solid background for clarity */}
-      <Card className="shadow-lg border-none bg-white/98 dark:bg-card/98 backdrop-blur-xl flex flex-col">
+      {/* Bar Chart Card (Summary) - Forced solid white background */}
+      <Card className="shadow-lg border-none bg-white dark:bg-card flex flex-col">
         <CardHeader className="p-6">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-[#4F46E5]" />
@@ -106,8 +106,8 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading, dept
         </CardContent>
       </Card>
 
-      {/* Pie Chart Card (Resolution Mix) - Using solid background for clarity */}
-      <Card className="shadow-lg border-none bg-white/98 dark:bg-card/98 backdrop-blur-xl flex flex-col">
+      {/* Pie Chart Card (Resolution Mix) - Forced solid white background */}
+      <Card className="shadow-lg border-none bg-white dark:bg-card flex flex-col">
         <CardHeader className="p-6">
           <div className="flex items-center gap-2">
             <PieIcon className="h-5 w-5 text-[#4F46E5]" />
