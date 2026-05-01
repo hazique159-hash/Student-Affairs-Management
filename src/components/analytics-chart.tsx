@@ -69,8 +69,8 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading, dept
 
   return (
     <div className="grid gap-6 md:grid-cols-2 h-full">
-      {/* Bar Chart Card */}
-      <Card className="shadow-lg border-none bg-background/60 backdrop-blur-md flex flex-col">
+      {/* Bar Chart Card (Summary) - Updated bg-card/95 for better visibility */}
+      <Card className="shadow-lg border-none bg-card/95 backdrop-blur-md flex flex-col">
         <CardHeader className="p-6">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-[#4F46E5]" />
@@ -106,8 +106,8 @@ export function AnalyticsChart({ students, teachers, complaints, isLoading, dept
         </CardContent>
       </Card>
 
-      {/* Pie Chart Card */}
-      <Card className="shadow-lg border-none bg-background/60 backdrop-blur-md flex flex-col">
+      {/* Pie Chart Card (Resolution Mix) - Updated bg-card/95 for better visibility */}
+      <Card className="shadow-lg border-none bg-card/95 backdrop-blur-md flex flex-col">
         <CardHeader className="p-6">
           <div className="flex items-center gap-2">
             <PieIcon className="h-5 w-5 text-[#4F46E5]" />

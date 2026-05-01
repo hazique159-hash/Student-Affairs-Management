@@ -128,9 +128,9 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Updated to bg-card/95 for better visibility */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-md border-l-4 border-l-[#4F46E5] bg-background/60 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#4F46E5] bg-card/95 backdrop-blur-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Students</CardTitle>
             <Users className="h-4 w-4 text-[#4F46E5]" />
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#A855F7] bg-background/60 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#A855F7] bg-card/95 backdrop-blur-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Faculty</CardTitle>
             <UserCheck className="h-4 w-4 text-[#A855F7]" />
@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#2563EB] bg-background/60 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#2563EB] bg-card/95 backdrop-blur-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Reports</CardTitle>
             <MessageSquareWarning className="h-4 w-4 text-[#2563EB]" />
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#EF4444] bg-background/60 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#EF4444] bg-card/95 backdrop-blur-md">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-[#EF4444] uppercase tracking-widest">Pending</CardTitle>
             <Clock className="h-4 w-4 text-[#EF4444]" />
@@ -191,7 +191,8 @@ export default function AnalyticsPage() {
           />
         </div>
 
-        <Card className="flex flex-col shadow-lg bg-background/60 backdrop-blur-md h-full min-h-[400px]">
+        {/* Recent Activity Card - Updated to bg-card/95 for clearer information */}
+        <Card className="flex flex-col shadow-lg bg-card/95 backdrop-blur-md h-full min-h-[400px]">
           <CardHeader className="border-b bg-muted/40 p-4">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-[#4F46E5]" />
