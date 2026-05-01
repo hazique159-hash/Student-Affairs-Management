@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
           description="Real-time institutional metrics and activity."
         />
         <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-background/50 backdrop-blur-sm border rounded-lg px-3 py-1.5 shadow-sm">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border rounded-lg px-3 py-1.5 shadow-sm">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={deptFilter} onValueChange={setDeptFilter}>
                     <SelectTrigger className="w-[180px] border-none shadow-none focus:ring-0 h-8 text-xs bg-transparent">
@@ -112,7 +112,7 @@ export default function AnalyticsPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2 bg-background/50 backdrop-blur-sm border rounded-lg px-3 py-1.5 shadow-sm">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border rounded-lg px-3 py-1.5 shadow-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <Select value={timeFilter} onValueChange={setTimeFilter}>
                     <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 h-8 text-xs bg-transparent">
@@ -128,9 +128,9 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Cards - Updated to bg-card/95 for better visibility */}
+      {/* KPI Cards - Forced white background for maximum visibility */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-md border-l-4 border-l-[#4F46E5] bg-card/95 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#4F46E5] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Students</CardTitle>
             <Users className="h-4 w-4 text-[#4F46E5]" />
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#A855F7] bg-card/95 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#A855F7] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Faculty</CardTitle>
             <UserCheck className="h-4 w-4 text-[#A855F7]" />
@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#2563EB] bg-card/95 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#2563EB] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Reports</CardTitle>
             <MessageSquareWarning className="h-4 w-4 text-[#2563EB]" />
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-l-4 border-l-[#EF4444] bg-card/95 backdrop-blur-md">
+        <Card className="shadow-md border-l-4 border-l-[#EF4444] bg-white dark:bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-[10px] font-bold text-[#EF4444] uppercase tracking-widest">Pending</CardTitle>
             <Clock className="h-4 w-4 text-[#EF4444]" />
@@ -191,9 +191,9 @@ export default function AnalyticsPage() {
           />
         </div>
 
-        {/* Recent Activity Card - Updated to bg-card/95 for clearer information */}
-        <Card className="flex flex-col shadow-lg bg-card/95 backdrop-blur-md h-full min-h-[400px]">
-          <CardHeader className="border-b bg-muted/40 p-4">
+        {/* Recent Activity Card - Forced white background */}
+        <Card className="flex flex-col shadow-lg bg-white dark:bg-card h-full min-h-[400px]">
+          <CardHeader className="border-b bg-muted/20 p-4">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-[#4F46E5]" />
               <CardTitle className="text-sm font-bold tracking-tight">Recent Activity</CardTitle>
@@ -206,7 +206,7 @@ export default function AnalyticsPage() {
                   <div className="flex justify-center p-8"><Loader2 className="animate-spin h-6 w-6 text-muted-foreground" /></div>
                 ) : recentComplaints && recentComplaints.length > 0 ? (
                   recentComplaints.map((c) => (
-                    <div key={c.id} className="p-4 hover:bg-muted/30 transition-colors group">
+                    <div key={c.id} className="p-4 hover:bg-muted/10 transition-colors group">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-bold text-sm truncate max-w-[140px] text-foreground">{c.studentName}</span>
                         <Badge variant={c.status === 'Pending' ? 'destructive' : 'secondary'} className="text-[9px] h-4 px-1.5 font-bold uppercase">
