@@ -44,7 +44,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
-import type { Student, Teacher } from '@/lib/types';
+import type { Student, Teacher, Complaint } from '@/lib/types';
 import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -165,6 +165,7 @@ export default function RegisterComplaintPage() {
       let studentRegId: string;
       let studentName: string;
       let filedByName: string;
+      let studentUid: string | null = null;
       const filedById = user.uid;
 
       if (isTeacher) {
@@ -196,8 +197,18 @@ export default function RegisterComplaintPage() {
         } else {
           filedByName = user.email!;
         }
+
+        // Find student UID to post to their portal
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
+        const studentUserSnapshot = await getDocs(studentUserQuery);
+        if (!studentUserSnapshot.empty) {
+            studentUid = studentUserSnapshot.docs[0].id;
+        }
+
       } else if (isStudent) {
         studentRegId = user.email!.split('@')[0].toUpperCase();
+        studentUid = user.uid;
+
         const studentDocRef = doc(firestore, 'students', studentRegId);
         const studentDoc = await getDoc(studentDocRef);
         if (studentDoc.exists()) {
@@ -217,7 +228,7 @@ export default function RegisterComplaintPage() {
         return;
       }
 
-      const complaintData = {
+      const complaintData: Complaint = {
         id: complaintId,
         title: values.title,
         description: values.description,
@@ -227,12 +238,15 @@ export default function RegisterComplaintPage() {
         filedByName: filedByName,
         status: 'Pending' as const,
         dateSubmitted: serverTimestamp(),
-        evidenceUrl: values.evidenceUrl || null,
+        evidenceUrl: values.evidenceUrl || undefined,
+        complaintType: isTeacher ? 'violation' : 'student_issue'
       };
 
+      // 1. Master collection
       const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
       batch.set(topLevelComplaintRef, complaintData);
 
+      // 2. Personal History for Filer
       const userComplaintRef = doc(
         firestore,
         `users/${filedById}/complaints`,
@@ -240,12 +254,9 @@ export default function RegisterComplaintPage() {
       );
       batch.set(userComplaintRef, complaintData);
 
-      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
-      const studentUserSnapshot = await getDocs(studentUserQuery);
-
-      if (!studentUserSnapshot.empty) {
-          const studentUserDoc = studentUserSnapshot.docs[0];
-          const studentPortalRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaintId);
+      // 3. Student Portal Visibility (if different from filer)
+      if (studentUid && studentUid !== filedById) {
+          const studentPortalRef = doc(firestore, `users/${studentUid}/complaints`, complaintId);
           batch.set(studentPortalRef, complaintData);
       }
 
@@ -280,7 +291,10 @@ export default function RegisterComplaintPage() {
             <CardHeader>
               <CardTitle>Complaint Form</CardTitle>
               <CardDescription>
-                Your submission will be reviewed by an administrator.
+                {isStudent 
+                  ? "Your concern will be reviewed by the Student Affairs department on the Student Issue dashboard."
+                  : "Your misconduct report will be reviewed by an administrator in the Violation Inbox."
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">

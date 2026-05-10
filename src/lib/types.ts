@@ -91,6 +91,7 @@ export type Complaint = {
   evidenceUrl?: string;
   paymentReceiptUrl?: string;
   paymentStatus?: 'Unpaid' | 'Submitted' | 'Verified';
+  complaintType?: 'violation' | 'student_issue';
 };
 
 export type TeacherAvailability = {

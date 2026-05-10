@@ -625,6 +625,11 @@
           "schema": {
             "$ref": "#/backend/entities/TeacherAvailability"
           },
+          "description": "Collection to store teacher availability for counseling.",
+          "params": [
+            {
+              "name": "availabilityId",
+              "description": "The unique ID of the availability record."
           "description": "Collection to store teacher availability for counseling sessions.",
           "params": [
             {

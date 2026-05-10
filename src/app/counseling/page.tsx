@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -275,6 +274,26 @@ export default function CounselingPage() {
     }
   };
 
+  const handleDeleteAvailability = async (availabilityId: string) => {
+    if (!firestore || !isAdmin) return;
+    setDeletingId(availabilityId);
+    try {
+        await deleteDoc(doc(firestore, 'counseling_availability', availabilityId));
+        toast({
+            title: 'Availability Removed',
+            description: 'The teacher availability record has been deleted.',
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Delete Failed',
+            description: error.message || 'Could not delete the availability record.',
+        });
+    } finally {
+        setDeletingId(null);
+    }
+  };
+
   const openWhatsApp = (session: CounselingSession) => {
     const student = students?.find(s => s.id === session.studentId);
     const phone = student?.phoneNumber || student?.phone;
@@ -424,8 +443,33 @@ export default function CounselingPage() {
             <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
           ) : availableTeachers && availableTeachers.length > 0 ? (
             <ul className="space-y-6">{availableTeachers.map((avail) => (
-              <li key={avail.id} className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                <div className="flex items-start justify-between"><h3 className="font-semibold">{avail.teacherName}</h3></div>
+              <li key={avail.id} className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors group">
+                <div className="flex items-start justify-between">
+                    <h3 className="font-semibold">{avail.teacherName}</h3>
+                    {isAdmin && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" disabled={deletingId === avail.id}>
+                                    {deletingId === avail.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Availability?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will remove the counseling availability for {avail.teacherName}.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteAvailability(avail.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
                 <div className="mt-2 space-y-2 text-sm">
                   <div><h4 className="font-medium text-muted-foreground">Available Days</h4><div className="flex flex-wrap gap-2 mt-1">{avail.availableDays.map((day) => (<Badge key={day} variant="secondary">{day}</Badge>))}</div></div>
                   <div><h4 className="font-medium text-muted-foreground">Available Slots</h4><div className="flex flex-wrap gap-2 mt-1">{avail.availableSlots.map((slot) => (<Badge key={slot} variant="outline">{slot}</Badge>))}</div></div>

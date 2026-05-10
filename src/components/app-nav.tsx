@@ -16,6 +16,7 @@ import {
   HandHeart,
   ClipboardList,
   Bell,
+  AlertCircle,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -29,7 +30,7 @@ const baseNavItems = [
   { href: '/admin', icon: Shield, label: 'Admin', roles: ['admin'] },
   { href: '/analytics', icon: BarChart2, label: 'Analytics', roles: ['admin'] },
   { href: '/announcements', icon: Megaphone, label: 'Announcements', roles: ['admin', 'teacher', 'student'] },
-  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin', 'teacher', 'student'] },
+  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin'] },
   { href: '/add-teacher', icon: UserPlus, label: 'Add Teacher', roles: ['admin'] },
   { href: '/teachers', icon: Briefcase, label: 'Teacher Records', roles: ['admin'] },
   { href: '/students', icon: Users, label: 'Student Records', roles: ['admin', 'teacher'] },
@@ -37,6 +38,7 @@ const baseNavItems = [
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints Inbox', roles: ['admin'] },
   { href: '/volunteer-applications', icon: ClipboardList, label: 'Volunteer Apps', roles: ['admin'] },
+  { href: '/student-issue', icon: AlertCircle, label: 'Student Issue', roles: ['admin'] },
   
   // Student
   { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student', 'teacher'] },
@@ -53,6 +55,7 @@ const adminNavOrder = [
   '/students',
   '/teachers',
   '/complaints',
+  '/student-issue',
   '/volunteer-applications',
   '/add-student',
   '/add-teacher',
@@ -62,7 +65,6 @@ const adminNavOrder = [
 
 const teacherNavOrder = [
   '/announcements',
-  '/notifications',
   '/students',
   '/my-complaints',
   '/register-complaint',
@@ -70,7 +72,6 @@ const teacherNavOrder = [
 
 const studentNavOrder = [
   '/announcements',
-  '/notifications',
   '/my-complaints',
   '/volunteer',
   '/register-complaint'
