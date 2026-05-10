@@ -165,6 +165,7 @@ export default function RegisterComplaintPage() {
       let studentRegId: string;
       let studentName: string;
       let filedByName: string;
+      let studentUid: string | null = null;
       const filedById = user.uid;
 
       if (isTeacher) {
@@ -196,8 +197,18 @@ export default function RegisterComplaintPage() {
         } else {
           filedByName = user.email!;
         }
+
+        // Find student UID to post to their portal
+        const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
+        const studentUserSnapshot = await getDocs(studentUserQuery);
+        if (!studentUserSnapshot.empty) {
+            studentUid = studentUserSnapshot.docs[0].id;
+        }
+
       } else if (isStudent) {
         studentRegId = user.email!.split('@')[0].toUpperCase();
+        studentUid = user.uid;
+
         const studentDocRef = doc(firestore, 'students', studentRegId);
         const studentDoc = await getDoc(studentDocRef);
         if (studentDoc.exists()) {
@@ -231,9 +242,11 @@ export default function RegisterComplaintPage() {
         complaintType: isTeacher ? 'violation' : 'student_issue'
       };
 
+      // 1. Master collection
       const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
       batch.set(topLevelComplaintRef, complaintData);
 
+      // 2. Personal History for Filer
       const userComplaintRef = doc(
         firestore,
         `users/${filedById}/complaints`,
@@ -241,12 +254,9 @@ export default function RegisterComplaintPage() {
       );
       batch.set(userComplaintRef, complaintData);
 
-      const studentUserQuery = query(collection(firestore, 'users'), where('studentId', '==', studentRegId));
-      const studentUserSnapshot = await getDocs(studentUserQuery);
-
-      if (!studentUserSnapshot.empty) {
-          const studentUserDoc = studentUserSnapshot.docs[0];
-          const studentPortalRef = doc(firestore, `users/${studentUserDoc.id}/complaints`, complaintId);
+      // 3. Student Portal Visibility (if different from filer)
+      if (studentUid && studentUid !== filedById) {
+          const studentPortalRef = doc(firestore, `users/${studentUid}/complaints`, complaintId);
           batch.set(studentPortalRef, complaintData);
       }
 
