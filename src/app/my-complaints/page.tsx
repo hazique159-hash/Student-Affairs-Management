@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquareHeart, Plus, Loader2, CircleDollarSign, Upload, X } from 'lucide-react';
+import { MessageSquareHeart, Plus, Loader2, CircleDollarSign, Upload, X, ShieldAlert, MessageSquareText } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -34,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 
@@ -141,12 +140,11 @@ export default function MyComplaintsPage() {
 
   const isLoading = isUserLoading || isLoadingComplaints;
   const isStudent = user?.email?.endsWith('@student.com');
-  const isTeacher = user?.email && !user.email.endsWith('@student.com') && !user.email.endsWith('@admin.com');
 
-  const pageTitle = isStudent ? "Violation Portal" : "Complaint Center";
+  const pageTitle = isStudent ? "Personal Portal" : "Complaint Center";
   const pageDescription = isStudent
-    ? "Review approved violations and settle outstanding fines."
-    : "Track the status of your submitted violation reports.";
+    ? "Review your reported issues and settle any misconduct fines."
+    : "Track the status of violation reports you have filed.";
 
   return (
     <div className="space-y-8 pb-10">
@@ -155,19 +153,19 @@ export default function MyComplaintsPage() {
         icon={MessageSquareHeart}
         description={pageDescription}
       >
-        {!isStudent && (
-          <Button size="sm" onClick={() => router.push('/register-complaint')} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            File New Complaint
-          </Button>
-        )}
+        <Button size="sm" onClick={() => router.push('/register-complaint')} className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          File New Complaint
+        </Button>
       </PageHeader>
 
       <Card>
         <CardHeader>
-          <CardTitle>History</CardTitle>
+          <CardTitle>History Feed</CardTitle>
           <CardDescription>
-            {isStudent ? "Approved complaints require immediate fine settlement via Easypaisa." : "List of all complaints filed by you."}
+            {isStudent 
+              ? "Disciplinary fines must be settled via Easypaisa. General concerns are for tracking only." 
+              : "List of all reports submitted by you for review."}
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 sm:px-6">
@@ -175,11 +173,10 @@ export default function MyComplaintsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[100px]">Type</TableHead>
                   <TableHead className="min-w-[120px]">Date</TableHead>
-                  {isStudent && <TableHead className="min-w-[120px]">Filed By</TableHead>}
-                  {isTeacher && <TableHead className="min-w-[120px]">Student</TableHead>}
-                  <TableHead className="min-w-[150px]">Title</TableHead>
-                  <TableHead className="min-w-[120px]">Payment</TableHead>
+                  <TableHead className="min-w-[150px]">Subject</TableHead>
+                  <TableHead className="min-w-[100px]">Payment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
@@ -188,8 +185,8 @@ export default function MyComplaintsPage() {
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
@@ -197,58 +194,75 @@ export default function MyComplaintsPage() {
                     </TableRow>
                   ))
                 ) : complaints && complaints.length > 0 ? (
-                  complaints.map((complaint) => (
-                    <TableRow key={complaint.id}>
-                      <TableCell>{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                      {isStudent && <TableCell className="truncate max-w-[100px]">{complaint.filedByName}</TableCell>}
-                      {isTeacher && <TableCell className="truncate max-w-[100px]">{complaint.studentName}</TableCell>}
-                      <TableCell className="truncate max-w-[150px]">{complaint.title}</TableCell>
-                      <TableCell>
-                         {complaint.status === 'Approved' && (
-                            <Badge variant={complaint.paymentStatus === 'Submitted' ? 'secondary' : 'outline'}>
-                               {complaint.paymentStatus === 'Submitted' ? 'Pending' : 'Unpaid'}
+                  complaints.map((complaint) => {
+                    const isViolation = !complaint.complaintType || complaint.complaintType === 'violation';
+                    
+                    return (
+                      <TableRow key={complaint.id}>
+                        <TableCell>
+                          {isViolation ? (
+                            <Badge variant="outline" className="text-[10px] text-destructive border-destructive">
+                              <ShieldAlert className="mr-1 h-3 w-3" /> Violation
                             </Badge>
-                         )}
-                         {complaint.status === 'Resolved' && <Badge className="bg-green-100 text-green-700">Verified</Badge>}
-                      </TableCell>
-                      <TableCell>
-                         <Badge
-                          variant={
-                            complaint.status === 'Rejected'
-                              ? 'destructive'
-                              : complaint.status === 'Resolved'
-                              ? 'secondary'
-                              : complaint.status === 'Approved'
-                              ? 'default'
-                              : 'outline'
-                          }
-                        >
-                          {complaint.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                         {isStudent && complaint.status === 'Approved' && complaint.paymentStatus !== 'Submitted' ? (
-                           <Button 
-                              size="sm" 
-                              onClick={() => setPayingComplaint(complaint)} 
-                              className="bg-green-600 hover:bg-green-700 h-8 px-2 text-xs"
-                           >
-                              <CircleDollarSign className="mr-1 h-3 w-3" />
-                              Pay Fine
-                           </Button>
-                         ) : (
-                           <span className="text-[10px] sm:text-xs text-muted-foreground italic">
-                              {complaint.status === 'Resolved' ? 'Verified' : 
-                               complaint.paymentStatus === 'Submitted' ? 'Reviewing' : '-'}
-                           </span>
-                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-primary border-primary">
+                              <MessageSquareText className="mr-1 h-3 w-3" /> Issue
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">{complaint.dateSubmitted?.seconds ? format(new Date(complaint.dateSubmitted.seconds * 1000), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                        <TableCell className="truncate max-w-[200px] font-medium text-sm">{complaint.title}</TableCell>
+                        <TableCell>
+                           {isViolation && complaint.status === 'Approved' ? (
+                              <Badge variant={complaint.paymentStatus === 'Submitted' ? 'secondary' : 'outline'} className="text-[10px]">
+                                 {complaint.paymentStatus === 'Submitted' ? 'Receipt Uploaded' : 'Fine Pending'}
+                              </Badge>
+                           ) : isViolation && complaint.status === 'Resolved' ? (
+                              <Badge className="bg-green-100 text-green-700 text-[10px]">Settled</Badge>
+                           ) : (
+                              <span className="text-[10px] text-muted-foreground italic">N/A</span>
+                           )}
+                        </TableCell>
+                        <TableCell>
+                           <Badge
+                            className="text-[10px]"
+                            variant={
+                              complaint.status === 'Rejected'
+                                ? 'destructive'
+                                : complaint.status === 'Resolved'
+                                ? 'secondary'
+                                : complaint.status === 'Approved'
+                                ? 'default'
+                                : 'outline'
+                            }
+                          >
+                            {complaint.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                           {isStudent && isViolation && complaint.status === 'Approved' && complaint.paymentStatus !== 'Submitted' ? (
+                             <Button 
+                                size="sm" 
+                                onClick={() => setPayingComplaint(complaint)} 
+                                className="bg-green-600 hover:bg-green-700 h-7 px-2 text-[10px]"
+                             >
+                                <CircleDollarSign className="mr-1 h-3 w-3" />
+                                Pay Rs. 1000
+                             </Button>
+                           ) : (
+                             <span className="text-[10px] text-muted-foreground">
+                                {complaint.status === 'Resolved' ? 'Record Verified' : 
+                                 complaint.paymentStatus === 'Submitted' ? 'Under Review' : '-'}
+                             </span>
+                           )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isStudent || isTeacher ? 6 : 5} className="text-center h-24 text-muted-foreground">
-                      No records found.
+                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground text-xs italic">
+                      No complaints or violations recorded.
                     </TableCell>
                   </TableRow>
                 )}
@@ -266,49 +280,41 @@ export default function MyComplaintsPage() {
       }}>
         <DialogContent className="sm:max-w-[450px] w-[95vw] rounded-lg">
           <DialogHeader>
-            <DialogTitle>Fine Payment</DialogTitle>
+            <DialogTitle>Fine Settlement</DialogTitle>
             <DialogDescription>
-              Submit your payment proof to resolve this violation record.
+              Disciplinary fine for: <strong>{payingComplaint?.title}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
-            <div className="bg-muted p-3 sm:p-4 rounded-lg space-y-2 text-xs sm:text-sm border">
-                <div className="flex justify-between">
-                    <span className="font-medium">Total Fine:</span>
-                    <span className="text-primary font-bold">Rs. 1000</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="font-medium">Violation:</span>
-                    <span className="truncate max-w-[150px]">{payingComplaint?.title}</span>
+          <div className="space-y-4 py-2">
+            <div className="bg-muted p-4 rounded-lg space-y-2 text-sm border">
+                <div className="flex justify-between font-bold">
+                    <span>Amount Due:</span>
+                    <span className="text-primary">Rs. 1000</span>
                 </div>
                 <div className="border-t pt-2 mt-2">
-                    <p className="font-bold text-center mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Payment Instructions</p>
+                    <p className="font-bold text-center mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Easypaisa Payment Details</p>
                     <div className="flex justify-between">
-                        <span>Method:</span>
-                        <span className="font-semibold text-green-600">Easypaisa</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Number:</span>
+                        <span>Account Number:</span>
                         <span className="font-bold text-primary">03140500595</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Name:</span>
+                        <span>Account Name:</span>
                         <span className="font-semibold">Muhammad Hazique</span>
                     </div>
                 </div>
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="receipt" className="text-xs sm:text-sm">Upload Payment Receipt</Label>
+                <Label htmlFor="receipt" className="text-sm font-bold">Upload Transaction Screenshot</Label>
                 {!receiptPreview ? (
                     <div className="flex items-center justify-center w-full">
-                        <label className="flex flex-col items-center justify-center w-full h-24 sm:h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/20 transition-colors">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/20 transition-colors">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <Upload className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-muted-foreground" />
-                                <p className="mb-1 text-xs text-muted-foreground">
-                                    <span className="font-semibold text-primary">Upload Receipt</span>
+                                <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                                <p className="text-xs text-muted-foreground">
+                                    <span className="font-semibold text-primary">Click to upload receipt</span>
                                 </p>
-                                <p className="text-[10px] text-muted-foreground text-center px-4">Max 500KB</p>
+                                <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG (Max 500KB)</p>
                             </div>
                             <input 
                                 id="receipt" 
@@ -321,11 +327,11 @@ export default function MyComplaintsPage() {
                         </label>
                     </div>
                 ) : (
-                    <div className="relative border rounded-lg p-1 sm:p-2 bg-muted/20">
+                    <div className="relative border rounded-lg p-2 bg-muted/20">
                         <Button
                             variant="destructive"
                             size="icon"
-                            className="absolute top-1 right-1 h-5 w-5 z-10"
+                            className="absolute top-1 right-1 h-6 w-6 z-10 rounded-full"
                             onClick={clearReceipt}
                         >
                             <X className="h-3 w-3" />
@@ -342,15 +348,15 @@ export default function MyComplaintsPage() {
                 )}
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setPayingComplaint(null)} className="w-full sm:w-auto">Cancel</Button>
+          <DialogFooter className="flex-row gap-2">
+            <Button variant="outline" onClick={() => setPayingComplaint(null)} className="flex-1">Cancel</Button>
             <Button 
                 onClick={handlePaymentSubmit} 
                 disabled={isProcessingPayment || !receiptPreview}
-                className="w-full sm:w-auto"
+                className="flex-1"
             >
                 {isProcessingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Confirm Payment
+                Submit Proof
             </Button>
           </DialogFooter>
         </DialogContent>
