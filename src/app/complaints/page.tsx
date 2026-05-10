@@ -96,7 +96,12 @@ export default function ComplaintsPage() {
 
   const filteredComplaints = useMemo(() => {
     if (!complaints) return [];
+    // Filter to only show TEACHER filed violations (misconduct)
+    // Legacy complaints (without type) are assumed violations for transition
     return complaints.filter((c) => {
+      const isViolation = !c.complaintType || c.complaintType === 'violation';
+      if (!isViolation) return false;
+
       const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
       const matchesSearch = 
         c.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,7 +212,7 @@ export default function ComplaintsPage() {
   const handleDownloadPDF = () => {
     if (!filteredComplaints.length) return;
     const pdf = new jsPDF();
-    pdf.text('AffairsConnect - Complaints Report', 14, 15);
+    pdf.text('AffairsConnect - Misconduct Violations Report', 14, 15);
     autoTable(pdf, {
       startY: 25,
       head: [['Student', 'ID', 'Violation', 'Status', 'Date']],
@@ -216,7 +221,7 @@ export default function ComplaintsPage() {
         c.dateSubmitted?.seconds ? format(new Date(c.dateSubmitted.seconds * 1000), 'PPP') : 'N/A'
       ]),
     });
-    pdf.save(`complaints-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    pdf.save(`violations-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   if (isUserLoading || !isAdmin) {
@@ -225,7 +230,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="space-y-4 pb-10">
-      <PageHeader title="Violation Inbox" icon={ShieldQuestion} description="Review misconduct reports and issue fines.">
+      <PageHeader title="Violation Inbox" icon={ShieldQuestion} description="Review misconduct reports filed by teachers and issue fines.">
         <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={!filteredComplaints.length} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" /> Download PDF
         </Button>
@@ -235,7 +240,8 @@ export default function ComplaintsPage() {
         <CardHeader className="p-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-                <CardTitle className="text-lg">Reports Feed</CardTitle>
+                <CardTitle className="text-lg">Teacher Reports Feed</CardTitle>
+                <CardDescription className="text-[10px]">Filtering only misconduct violations.</CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="relative w-full sm:w-64">
@@ -257,56 +263,57 @@ export default function ComplaintsPage() {
         </CardHeader>
         <CardContent className="px-0 sm:px-4 pb-4">
           <div className="overflow-x-auto">
-            <TooltipProvider>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead className="min-w-[120px] text-xs">Student</TableHead>
-                        <TableHead className="text-xs">Count</TableHead>
-                        <TableHead className="min-w-[150px] text-xs">Violation</TableHead>
-                        <TableHead className="min-w-[120px] text-xs">Fine Status</TableHead>
-                        <TableHead className="text-xs">Review</TableHead>
-                        <TableHead className="text-right text-xs">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredComplaints.map((c) => (
-                        <TableRow key={c.id}>
-                            <TableCell>
-                            <div className="font-medium text-xs truncate max-w-[100px]">{c.studentName}</div>
-                            <div className="text-[10px] text-muted-foreground">{c.studentId}</div>
-                            </TableCell>
-                            <TableCell><Badge variant={(studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0) > 2 ? 'destructive' : 'outline'} className="text-[10px]">{studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0}</Badge></TableCell>
-                            <TableCell className="max-w-[150px] truncate text-xs">{c.title}</TableCell>
-                            <TableCell>
-                            {c.status === 'Approved' && (
-                                <div className="flex items-center gap-2">
-                                    <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'} className="text-[10px]">
-                                        {c.paymentStatus === 'Submitted' ? 'Receipt Uploaded' : 'Unpaid'}
-                                    </Badge>
-                                    {c.paymentReceiptUrl && (
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
-                                        <Eye className="h-3 w-3" />
-                                        </Button>
-                                    )}
-                                </div>
-                            )}
-                            {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Fine Settled</Badge>}
-                            </TableCell>
-                            <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'} className="text-[10px]">{c.status}</Badge></TableCell>
-                            <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                                {c.status === 'Pending' && (
-                                    <div className="flex gap-1">
-                                        <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
-                                        <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
-                                    </div>
-                                )}
-                                {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
-                                    <Button size="sm" className="h-7 px-2 bg-green-600 hover:bg-green-700 text-[10px]" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
-                                        Verify Payment
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[120px] text-xs">Student</TableHead>
+                  <TableHead className="text-xs">Count</TableHead>
+                  <TableHead className="min-w-[150px] text-xs">Violation</TableHead>
+                  <TableHead className="min-w-[120px] text-xs">Fine Status</TableHead>
+                  <TableHead className="text-xs">Review</TableHead>
+                  <TableHead className="text-right text-xs">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredComplaints.length > 0 ? (
+                    filteredComplaints.map((c) => (
+                    <TableRow key={c.id}>
+                        <TableCell>
+                        <div className="font-medium text-xs truncate max-w-[100px]">{c.studentName}</div>
+                        <div className="text-[10px] text-muted-foreground">{c.studentId}</div>
+                        </TableCell>
+                        <TableCell><Badge variant={(studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0) > 2 ? 'destructive' : 'outline'} className="text-[10px]">{studentMap.get(c.studentId.toUpperCase())?.complaintCount || 0}</Badge></TableCell>
+                        <TableCell className="max-w-[150px] truncate text-xs">{c.title}</TableCell>
+                        <TableCell>
+                        {c.status === 'Approved' && (
+                            <div className="flex items-center gap-2">
+                                <Badge variant={c.paymentStatus === 'Submitted' ? 'secondary' : 'outline'} className="text-[10px]">
+                                    {c.paymentStatus === 'Submitted' ? 'Receipt Uploaded' : 'Unpaid'}
+                                </Badge>
+                                {c.paymentReceiptUrl && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewingReceipt(c.paymentReceiptUrl!)}>
+                                    <Eye className="h-3 w-3" />
                                     </Button>
                                 )}
+                            </div>
+                        )}
+                        {c.status === 'Resolved' && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Fine Settled</Badge>}
+                        </TableCell>
+                        <TableCell><Badge variant={c.status === 'Rejected' ? 'destructive' : c.status === 'Approved' ? 'default' : 'secondary'} className="text-[10px]">{c.status}</Badge></TableCell>
+                        <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                            {c.status === 'Pending' && (
+                                <div className="flex gap-1">
+                                    <Button size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Approved')} disabled={updatingId === c.id}>Approve</Button>
+                                    <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={() => handleStatusUpdate(c, 'Rejected')} disabled={updatingId === c.id}>Reject</Button>
+                                </div>
+                            )}
+                            {c.status === 'Approved' && c.paymentStatus === 'Submitted' && (
+                                <Button size="sm" className="h-7 px-2 bg-green-600 hover:bg-green-700 text-[10px]" onClick={() => handleStatusUpdate(c, 'Resolved')} disabled={updatingId === c.id}>
+                                    Verify Payment
+                                </Button>
+                            )}
+                            <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={() => openWhatsApp(c)}>
@@ -315,21 +322,28 @@ export default function ComplaintsPage() {
                                     </TooltipTrigger>
                                     <TooltipContent>WhatsApp Student</TooltipContent>
                                 </Tooltip>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setViewingComplaint(c)}>Details</Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                            </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TooltipProvider>
+                            </TooltipProvider>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setViewingComplaint(c)}>Details</Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive h-7 w-7"><Trash2 className="h-3.5 w-3.5"/></Button></AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Delete Complaint?</AlertDialogTitle><AlertDialogDescription>This will remove the record permanently.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(c)}>Delete</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground text-xs italic">
+                            No violations found matching the criteria.
+                        </TableCell>
+                    </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -343,6 +357,7 @@ export default function ComplaintsPage() {
                   <div className="space-y-4 py-4 text-sm">
                       <p><strong>Student:</strong> {viewingComplaint.studentName} ({viewingComplaint.studentId})</p>
                       <p><strong>Description:</strong> {viewingComplaint.description}</p>
+                      <p><strong>Filed By:</strong> {viewingComplaint.filedByName}</p>
                       {viewingComplaint.evidenceUrl && (
                         <div className="space-y-2">
                             <p><strong>Evidence:</strong></p>

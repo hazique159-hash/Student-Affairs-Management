@@ -44,7 +44,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
-import type { Student, Teacher } from '@/lib/types';
+import type { Student, Teacher, Complaint } from '@/lib/types';
 import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -217,7 +217,7 @@ export default function RegisterComplaintPage() {
         return;
       }
 
-      const complaintData = {
+      const complaintData: Complaint = {
         id: complaintId,
         title: values.title,
         description: values.description,
@@ -227,7 +227,8 @@ export default function RegisterComplaintPage() {
         filedByName: filedByName,
         status: 'Pending' as const,
         dateSubmitted: serverTimestamp(),
-        evidenceUrl: values.evidenceUrl || null,
+        evidenceUrl: values.evidenceUrl || undefined,
+        complaintType: isTeacher ? 'violation' : 'student_issue'
       };
 
       const topLevelComplaintRef = doc(firestore, 'complaints', complaintId);
@@ -280,7 +281,10 @@ export default function RegisterComplaintPage() {
             <CardHeader>
               <CardTitle>Complaint Form</CardTitle>
               <CardDescription>
-                Your submission will be reviewed by an administrator.
+                {isStudent 
+                  ? "Your concern will be reviewed by the Student Affairs department on the Student Issue dashboard."
+                  : "Your misconduct report will be reviewed by an administrator in the Violation Inbox."
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
