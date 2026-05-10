@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X, SendHorizontal, Mail, AlertTriangle } from 'lucide-react';
+import { Bell, Info, ShieldAlert, Calendar, Loader2, CheckCircle2, Plus, X, SendHorizontal, Mail, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import {
   Card,
@@ -37,6 +37,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,7 +59,7 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { Notification, Student, Teacher, Admin } from '@/lib/types';
 import { sendBroadcastToEmails } from './actions';
@@ -67,6 +78,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const getRole = () => {
     const email = user?.email || '';
@@ -82,7 +94,6 @@ export default function NotificationsPage() {
   const role = getRole();
   const isAdmin = role === 'admin';
 
-  // Security: Redirect non-admins
   useEffect(() => {
     if (!isUserLoading && !isAdmin) {
       toast({
@@ -94,14 +105,12 @@ export default function NotificationsPage() {
     }
   }, [isUserLoading, isAdmin, router, toast]);
 
-  // Fetch notifications
   const notificationsRef = useMemoFirebase(
     () => (firestore ? query(collection(firestore, 'notifications'), orderBy('date', 'desc')) : null),
     [firestore]
   );
   const { data: notifications, isLoading: isLoadingNotifications } = useCollection<Notification>(notificationsRef);
 
-  // Data for harvesting (Admin only)
   const studentsRef = useMemoFirebase(() => (firestore && isAdmin ? collection(firestore, 'students') : null), [firestore, isAdmin]);
   const teachersRef = useMemoFirebase(() => (firestore && isAdmin ? collection(firestore, 'teachers') : null), [firestore, isAdmin]);
   const adminsRef = useMemoFirebase(() => (firestore && isAdmin ? collection(firestore, 'roles_admin') : null), [firestore, isAdmin]);
@@ -188,6 +197,19 @@ export default function NotificationsPage() {
       });
     } finally {
       setIsBroadcasting(false);
+    }
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    if (!firestore || !isAdmin) return;
+    setDeletingId(notificationId);
+    try {
+        await deleteDoc(doc(firestore, 'notifications', notificationId));
+        toast({ title: 'Notification Removed', description: 'The broadcast record has been deleted.' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message });
+    } finally {
+        setDeletingId(null);
     }
   };
 
@@ -355,7 +377,7 @@ export default function NotificationsPage() {
                 <div className="p-8 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></div>
               ) : filteredNotifications.length > 0 ? (
                 filteredNotifications.map((notification) => (
-                  <div key={notification.id} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div key={notification.id} className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors group">
                     <div className="mt-1">
                       {notification.type === 'system' && <div className="bg-blue-100 p-2 rounded-full"><Info className="h-4 w-4 text-blue-600" /></div>}
                       {notification.type === 'security' && <div className="bg-red-100 p-2 rounded-full"><ShieldAlert className="h-4 w-4 text-red-600" /></div>}
@@ -364,8 +386,27 @@ export default function NotificationsPage() {
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-semibold">{notification.title}</h4>
-                        <div className="flex gap-1">
-                          {notification.targetRoles.map(r => <Badge key={r} variant="secondary" className="text-[8px] h-3.5 capitalize">{r}</Badge>)}
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {notification.targetRoles.map(r => <Badge key={r} variant="secondary" className="text-[8px] h-3.5 capitalize">{r}</Badge>)}
+                          </div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" disabled={deletingId === notification.id}>
+                                    {deletingId === notification.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Broadcast Record?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will remove the notification from the history. It does not unsend emails already dispatched.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(notification.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">{notification.message}</p>
