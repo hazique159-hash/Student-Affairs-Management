@@ -16,6 +16,7 @@ import {
   HandHeart,
   ClipboardList,
   Bell,
+  AlertCircle,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -37,6 +38,7 @@ const baseNavItems = [
   { href: '/add-student', icon: UserPlus, label: 'Add Student', roles: ['admin'] },
   { href: '/complaints', icon: MessageSquareWarning, label: 'Complaints Inbox', roles: ['admin'] },
   { href: '/volunteer-applications', icon: ClipboardList, label: 'Volunteer Apps', roles: ['admin'] },
+  { href: '/student-issue', icon: AlertCircle, label: 'Student Issue', roles: ['admin'] },
   
   // Student
   { href: '/my-complaints', icon: MessageSquareHeart, label: 'My Complaints', roles: ['student', 'teacher'] },
@@ -53,6 +55,7 @@ const adminNavOrder = [
   '/students',
   '/teachers',
   '/complaints',
+  '/student-issue',
   '/volunteer-applications',
   '/add-student',
   '/add-teacher',
