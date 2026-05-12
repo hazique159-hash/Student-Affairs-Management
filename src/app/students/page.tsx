@@ -1,5 +1,5 @@
 'use client';
-import { Users, Plus, Loader2, Search, Filter } from 'lucide-react';
+import { Users, Plus, Loader2, Search, Filter, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -38,6 +38,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 const DEPARTMENTS = [
   'All',
@@ -111,6 +114,37 @@ export default function StudentsPage() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!filteredStudents || filteredStudents.length === 0) return;
+
+    const pdf = new jsPDF();
+    pdf.setFontSize(18);
+    pdf.text('AffairsConnect - Student Records Report', 14, 20);
+    pdf.setFontSize(10);
+    pdf.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 28);
+    pdf.text(`Filters: Department (${deptFilter}), Search ID ("${searchTerm || 'None'}")`, 14, 34);
+
+    const tableData = filteredStudents.map((student) => [
+      student.id,
+      `${student.firstName} ${student.lastName}`,
+      student.department,
+      student.complaintCount ?? 0,
+      student.email || 'N/A',
+      student.phoneNumber || 'N/A',
+    ]);
+
+    autoTable(pdf, {
+      startY: 40,
+      head: [['Student ID', 'Name', 'Department', 'Violations', 'Email', 'Phone']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] }, // Brand Indigo
+      styles: { fontSize: 8 },
+    });
+
+    pdf.save(`student-records-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
 
   return (
     <div className="space-y-8 pb-10">
@@ -119,12 +153,18 @@ export default function StudentsPage() {
         icon={Users}
         description="Manage student records and directory information."
       >
-        {isAdmin && (
-          <Button size="sm" onClick={() => router.push('/add-student')} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Student
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={!filteredStudents?.length}>
+            <Download className="mr-2 h-4 w-4" />
+            Download List
           </Button>
-        )}
+          {isAdmin && (
+            <Button size="sm" onClick={() => router.push('/add-student')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Student
+            </Button>
+          )}
+        </div>
       </PageHeader>
 
       <Card>
