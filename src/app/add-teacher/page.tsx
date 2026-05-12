@@ -56,11 +56,19 @@ const DEPARTMENTS = [
   'Law',
 ] as const;
 
+const DESIGNATIONS = ['Junior Lecturer', 'Senior Lecturer'] as const;
+
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),
   lastName: z.string().min(1, { message: 'Last name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 digits.' }),
+  cnicNumber: z.string().regex(/^[0-9]{5}-[0-9]{7}-[0-9]{1}$/, { 
+    message: 'CNIC must be in 00000-0000000-0 format.' 
+  }),
+  designation: z.enum(DESIGNATIONS, {
+    required_error: 'Please select a designation.',
+  }),
   department: z.enum(DEPARTMENTS, {
     required_error: 'Please select a department.',
   }),
@@ -80,6 +88,8 @@ export default function AddTeacherPage() {
       lastName: '',
       email: '',
       phoneNumber: '',
+      cnicNumber: '',
+      designation: undefined,
       department: undefined,
       password: '',
     },
@@ -115,6 +125,8 @@ export default function AddTeacherPage() {
           lastName: values.lastName,
           email: values.email,
           phoneNumber: values.phoneNumber,
+          cnicNumber: values.cnicNumber,
+          designation: values.designation,
           department: values.department,
         });
 
@@ -140,7 +152,7 @@ export default function AddTeacherPage() {
       <PageHeader
         title="Add New Teacher"
         icon={UserPlus}
-        description="Create a new login account for a teacher."
+        description="Create a new login account for a teacher with full credentials."
       />
 
       <Card className="max-w-2xl mx-auto">
@@ -149,7 +161,7 @@ export default function AddTeacherPage() {
             <CardHeader>
               <CardTitle>Teacher Details</CardTitle>
               <CardDescription>
-                Provide the teacher's information and a temporary password.
+                Provide the teacher's profile information and a temporary password.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
@@ -213,6 +225,45 @@ export default function AddTeacherPage() {
                   )}
                 />
               </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cnicNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CNIC Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="12345-1234567-1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="designation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Designation</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Designation" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DESIGNATIONS.map((desig) => (
+                            <SelectItem key={desig} value={desig}>
+                              {desig}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                   control={form.control}
                   name="department"
@@ -222,7 +273,7 @@ export default function AddTeacherPage() {
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a department" />
+                            <SelectValue placeholder="Select Department" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -242,9 +293,9 @@ export default function AddTeacherPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Temporary Password</FormLabel>
+                    <FormLabel>Login Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="password" placeholder="At least 6 characters" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -65,6 +65,8 @@ export type Teacher = {
   lastName: string;
   email: string;
   phoneNumber: string;
+  cnicNumber: string;
+  designation: 'Junior Lecturer' | 'Senior Lecturer';
   department: Department;
 };
 
