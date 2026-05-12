@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { BarChart2, Users, UserCheck, Loader2, MessageSquareWarning, Clock, Activity, Filter, Calendar } from 'lucide-react';
+import { 
+  BarChart2, 
+  Users, 
+  UserCheck, 
+  Loader2, 
+  MessageSquareWarning, 
+  Clock, 
+  Activity, 
+  Filter, 
+  Calendar,
+  Download
+} from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { AnalyticsChart } from '@/components/analytics-chart';
 import {
@@ -10,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Student, Teacher, Complaint } from '@/lib/types';
@@ -17,6 +29,8 @@ import { format, subDays, isAfter, startOfDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const DEPARTMENTS = [
   'All Departments',
@@ -111,16 +125,83 @@ export default function AnalyticsPage() {
     return { students, teachers, complaints };
   }, [studentsData, teachersData, complaintsData, deptFilter, timeFilter]);
 
+  const downloadTeachersPDF = () => {
+    if (!teachersData) return;
+    const pdf = new jsPDF();
+    pdf.text('AffairsConnect - Faculty Directory', 14, 15);
+    autoTable(pdf, {
+      startY: 25,
+      head: [['Name', 'Email', 'Department']],
+      body: teachersData.map(t => [`${t.firstName} ${t.lastName}`, t.email, t.department]),
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+    pdf.save('teacher-records.pdf');
+  };
+
+  const downloadStudentsPDF = () => {
+    if (!studentsData) return;
+    const pdf = new jsPDF();
+    pdf.text('AffairsConnect - Student Master List', 14, 15);
+    autoTable(pdf, {
+      startY: 25,
+      head: [['ID', 'Name', 'Department', 'Violations']],
+      body: studentsData.map(s => [s.id, `${s.firstName} ${s.lastName}`, s.department, s.complaintCount || 0]),
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+    pdf.save('student-records.pdf');
+  };
+
+  const downloadTodayComplaintsPDF = () => {
+    if (!complaintsData) return;
+    const today = startOfDay(new Date());
+    const todayComplaints = complaintsData.filter(c => {
+      if (!c.dateSubmitted?.seconds) return false;
+      return isAfter(new Date(c.dateSubmitted.seconds * 1000), today);
+    });
+
+    const pdf = new jsPDF();
+    pdf.text(`AffairsConnect - Daily Activity Report (${format(new Date(), 'PPP')})`, 14, 15);
+    autoTable(pdf, {
+      startY: 25,
+      head: [['Student', 'ID', 'Subject', 'Type', 'Status']],
+      body: todayComplaints.map(c => [
+        c.studentName, 
+        c.studentId, 
+        c.title, 
+        c.complaintType === 'violation' ? 'Violation' : 'Issue',
+        c.status
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+    pdf.save(`daily-logs-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   const isLoading = isLoadingStudents || isLoadingTeachers || isLoadingComplaints;
 
   return (
     <div className="space-y-6 pb-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <PageHeader
           title="Dashboard Overview"
           icon={BarChart2}
           description="Real-time institutional metrics and activity."
-        />
+        >
+          <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+            <Button variant="outline" size="sm" onClick={downloadTeachersPDF} disabled={!teachersData?.length}>
+              <Download className="mr-2 h-4 w-4" /> Teacher PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadStudentsPDF} disabled={!studentsData?.length}>
+              <Download className="mr-2 h-4 w-4" /> Student PDF
+            </Button>
+            <Button variant="secondary" size="sm" onClick={downloadTodayComplaintsPDF} disabled={!complaintsData?.length}>
+              <Download className="mr-2 h-4 w-4" /> Today's Logs
+            </Button>
+          </div>
+        </PageHeader>
+        
         <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border rounded-lg px-3 py-1.5 shadow-sm">
                 <Filter className="h-4 w-4 text-muted-foreground" />
