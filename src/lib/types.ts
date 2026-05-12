@@ -66,7 +66,7 @@ export type Teacher = {
   email: string;
   phoneNumber: string;
   cnicNumber: string;
-  designation: 'Junior Lecturer' | 'Senior Lecturer';
+  designation: 'Junior Lecturer' | 'Senior Lecturer' | 'Lab Instructor';
   department: Department;
 };
 

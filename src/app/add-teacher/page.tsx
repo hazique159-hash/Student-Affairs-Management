@@ -56,7 +56,7 @@ const DEPARTMENTS = [
   'Law',
 ] as const;
 
-const DESIGNATIONS = ['Junior Lecturer', 'Senior Lecturer'] as const;
+const DESIGNATIONS = ['Junior Lecturer', 'Senior Lecturer', 'Lab Instructor'] as const;
 
 const teacherSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required.' }),

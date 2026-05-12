@@ -127,7 +127,7 @@
         },
         "designation": {
           "type": "string",
-          "enum": ["Junior Lecturer", "Senior Lecturer"],
+          "enum": ["Junior Lecturer", "Senior Lecturer", "Lab Instructor"],
           "description": "Teacher's professional designation."
         },
         "department": {
