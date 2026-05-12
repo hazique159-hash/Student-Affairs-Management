@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Plus, Loader2, Search, Eye, Phone, CreditCard, User } from 'lucide-react';
+import { Briefcase, Plus, Loader2, Search, Eye, Phone, CreditCard, User, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -38,8 +38,32 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+
+const DEPARTMENTS = [
+  'All',
+  'Computer Science',
+  'Software Engineering',
+  'Mathematics',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Management Sciences',
+  'Accounting & Finance',
+  'Psychology',
+  'English',
+  'Bioinformatics & Biosciences',
+  'Pharmacy',
+  'Law',
+] as const;
 
 export default function TeachersPage() {
   const firestore = useFirestore();
@@ -48,6 +72,7 @@ export default function TeachersPage() {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deptFilter, setDeptFilter] = useState('All');
   const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
@@ -61,10 +86,16 @@ export default function TeachersPage() {
   const isLoading = isUserLoading || isLoadingTeachers;
 
   const filteredTeachers = teachers?.filter(
-    (teacher) =>
-      teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (teacher) => {
+      const matchesSearch = 
+        teacher.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesDept = deptFilter === 'All' || teacher.department === deptFilter;
+      
+      return matchesSearch && matchesDept;
+    }
   );
 
   useEffect(() => {
@@ -99,7 +130,6 @@ export default function TeachersPage() {
     }
   };
 
-
   if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
@@ -120,15 +150,30 @@ export default function TeachersPage() {
       </PageHeader>
 
       <Card>
-        <div className="border-b p-4">
-            <div className="relative">
+        <div className="border-b p-4 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                     placeholder="Search by name or email..."
-                    className="pl-8 w-full max-w-sm"
+                    className="pl-8 w-full"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+              <Select value={deptFilter} onValueChange={setDeptFilter}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <SelectValue placeholder="Department Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
         </div>
         <CardContent className="p-0">
