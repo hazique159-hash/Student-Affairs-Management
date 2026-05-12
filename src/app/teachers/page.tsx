@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Plus, Loader2, Search, Eye, Phone, CreditCard, User, Filter } from 'lucide-react';
+import { Briefcase, Plus, Loader2, Search, Eye, Phone, CreditCard, User, Filter, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -47,6 +47,9 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 const DEPARTMENTS = [
   'All',
@@ -130,6 +133,37 @@ export default function TeachersPage() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!filteredTeachers || filteredTeachers.length === 0) return;
+
+    const pdf = new jsPDF();
+    pdf.setFontSize(18);
+    pdf.text('AffairsConnect - Faculty Directory Report', 14, 20);
+    pdf.setFontSize(10);
+    pdf.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 28);
+    pdf.text(`Filters: Department (${deptFilter}), Search ("${searchTerm || 'None'}")`, 14, 34);
+
+    const tableData = filteredTeachers.map((teacher) => [
+      `${teacher.firstName} ${teacher.lastName}`,
+      teacher.email,
+      teacher.department,
+      teacher.designation || 'N/A',
+      teacher.phoneNumber || 'N/A',
+      teacher.cnicNumber || 'N/A',
+    ]);
+
+    autoTable(pdf, {
+      startY: 40,
+      head: [['Name', 'Email', 'Department', 'Designation', 'Phone', 'CNIC']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229] }, // Brand Indigo
+      styles: { fontSize: 8 },
+    });
+
+    pdf.save(`teacher-records-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   if (isUserLoading || !isAdmin) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
   }
@@ -141,12 +175,18 @@ export default function TeachersPage() {
         icon={Briefcase}
         description="View and manage faculty records and directory information."
       >
-        {isAdmin && (
-          <Button size="sm" onClick={() => router.push('/add-teacher')} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Teacher
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={!filteredTeachers?.length}>
+            <Download className="mr-2 h-4 w-4" />
+            Download List
           </Button>
-        )}
+          {isAdmin && (
+            <Button size="sm" onClick={() => router.push('/add-teacher')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Teacher
+            </Button>
+          )}
+        </div>
       </PageHeader>
 
       <Card>
@@ -217,7 +257,7 @@ export default function TeachersPage() {
                       {isAdmin && (
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingTeacher(teacher)}>
+                              <Button variant="ghost" size="icon" title="View Profile" className="h-8 w-8" onClick={() => setViewingTeacher(teacher)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
