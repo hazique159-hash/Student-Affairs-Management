@@ -1,5 +1,5 @@
 'use client';
-import { Briefcase, Plus, Loader2, Search } from 'lucide-react';
+import { Briefcase, Plus, Loader2, Search, Eye, Phone, CreditCard, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -30,7 +30,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 export default function TeachersPage() {
   const firestore = useFirestore();
@@ -39,6 +48,7 @@ export default function TeachersPage() {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
@@ -99,7 +109,7 @@ export default function TeachersPage() {
       <PageHeader
         title="Teacher Records"
         icon={Briefcase}
-        description="View and manage teacher records."
+        description="View and manage faculty records and directory information."
       >
         {isAdmin && (
           <Button size="sm" onClick={() => router.push('/add-teacher')} className="w-full sm:w-auto">
@@ -129,6 +139,7 @@ export default function TeachersPage() {
                   <TableHead className="min-w-[150px]">Name</TableHead>
                   <TableHead className="min-w-[150px]">Email</TableHead>
                   <TableHead className="min-w-[120px]">Department</TableHead>
+                  <TableHead className="min-w-[120px]">Designation</TableHead>
                   {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -139,6 +150,7 @@ export default function TeachersPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                       {isAdmin && <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>}
                     </TableRow>
                   ))}
@@ -152,9 +164,17 @@ export default function TeachersPage() {
                             {teacher.department}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {teacher.designation || 'Faculty'}
+                          </span>
+                        </TableCell>
                       {isAdmin && (
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingTeacher(teacher)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => router.push(`/edit-teacher/${teacher.id}`)}>
                                 Edit
                               </Button>
@@ -187,7 +207,7 @@ export default function TeachersPage() {
                   ))}
                   {!isLoading && filteredTeachers?.length === 0 && (
                       <TableRow>
-                          <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center">
+                          <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center">
                           No teachers found.
                           </TableCell>
                       </TableRow>
@@ -197,6 +217,61 @@ export default function TeachersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Teacher Info Dialog */}
+      {viewingTeacher && (
+        <Dialog open={!!viewingTeacher} onOpenChange={() => setViewingTeacher(null)}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Teacher Profile
+              </DialogTitle>
+              <DialogDescription>
+                Institutional credentials and contact information.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-6">
+              <div className="flex flex-col items-center text-center space-y-1">
+                <h3 className="text-xl font-bold">{viewingTeacher.firstName} {viewingTeacher.lastName}</h3>
+                <Badge variant="secondary" className="px-3">{viewingTeacher.designation}</Badge>
+                <p className="text-sm text-muted-foreground">{viewingTeacher.department} Department</p>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-muted p-2 rounded-full"><Briefcase className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Official Email</p>
+                    <p className="text-sm font-medium">{viewingTeacher.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="bg-muted p-2 rounded-full"><Phone className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Phone Number</p>
+                    <p className="text-sm font-medium">{viewingTeacher.phoneNumber || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="bg-muted p-2 rounded-full"><CreditCard className="h-4 w-4 text-muted-foreground" /></div>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">CNIC Number</p>
+                    <p className="text-sm font-medium">{viewingTeacher.cnicNumber || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setViewingTeacher(null)}>Close Profile</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
