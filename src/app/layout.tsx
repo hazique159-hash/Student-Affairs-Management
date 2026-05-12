@@ -113,7 +113,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     {user.email || "Administrator"}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
-                    {role === 'Admin' ? 'Supervisor' : role}
+                    {role}
                   </span>
                 </div>
                 <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout}>
