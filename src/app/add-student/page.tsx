@@ -62,8 +62,8 @@ const studentSchema = z.object({
   registrationNumber: z
     .string()
     .min(1, { message: 'Registration number is required.' })
-    .regex(/^[A-Z0-9]+$/, { 
-      message: 'Registration number must contain only capital letters and numbers.' 
+    .regex(/^[A-Z]{3}[0-9]{1,6}$/, { 
+      message: 'Registration ID must start with 3 capital letters followed by up to 6 digits (e.g., BCS223089).' 
     }),
   email: z.string().email({ message: 'Please enter a valid personal or institutional email.' }),
   phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 digits.' }),
@@ -173,7 +173,7 @@ export default function AddStudentPage() {
                     <FormItem>
                         <FormLabel>Registration ID</FormLabel>
                         <FormControl><Input placeholder="BCS223089" {...field} /></FormControl>
-                        <FormDescription>Used for record tracking.</FormDescription>
+                        <FormDescription>Must start with 3 capital letters and up to 6 numbers.</FormDescription>
                         <FormMessage />
                     </FormItem>
                 )} />
