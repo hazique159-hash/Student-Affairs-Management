@@ -1,5 +1,5 @@
 'use client';
-import { Users, Plus, Loader2, Search } from 'lucide-react';
+import { Users, Plus, Loader2, Search, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
@@ -28,9 +28,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
+
+const DEPARTMENTS = [
+  'All',
+  'Computer Science',
+  'Software Engineering',
+  'Mathematics',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Management Sciences',
+  'Accounting & Finance',
+  'Psychology',
+  'English',
+  'Bioinformatics & Biosciences',
+  'Pharmacy',
+  'Law',
+] as const;
 
 export default function StudentsPage() {
   const firestore = useFirestore();
@@ -39,6 +63,7 @@ export default function StudentsPage() {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deptFilter, setDeptFilter] = useState('All');
 
   const isAdmin = user?.email === 'studentaffairs316@gmail.com' || user?.email?.endsWith('@admin.com');
 
@@ -48,9 +73,11 @@ export default function StudentsPage() {
   );
   const { data: students, isLoading } = useCollection<Student>(studentsRef);
 
-  const filteredStudents = students?.filter(student =>
-    student.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students?.filter(student => {
+    const matchesId = student.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDept = deptFilter === 'All' || student.department === deptFilter;
+    return matchesId && matchesDept;
+  });
 
   const handleDelete = async (studentToDelete: Student) => {
     if (!firestore || !isAdmin) return;
@@ -90,7 +117,7 @@ export default function StudentsPage() {
       <PageHeader
         title="Student Records"
         icon={Users}
-        description="Manage student records."
+        description="Manage student records and directory information."
       >
         {isAdmin && (
           <Button size="sm" onClick={() => router.push('/add-student')} className="w-full sm:w-auto">
@@ -101,15 +128,30 @@ export default function StudentsPage() {
       </PageHeader>
 
       <Card>
-        <div className="border-b p-4">
-            <div className="relative">
+        <div className="border-b p-4 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                     placeholder="Search by ID..."
-                    className="pl-8 w-full max-w-sm"
+                    className="pl-8 w-full"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+              <Select value={deptFilter} onValueChange={setDeptFilter}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <SelectValue placeholder="Department Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
         </div>
         <CardContent className="p-0">
